@@ -1,0 +1,125 @@
+WARNING: work in progress. Don't expect this plugin to work yet
+
+Bart Trojanowski started working on asystem making it much easier for me
+helping implement a feature Vim was missing for a too long time: async
+communication with external processes.
+
+Because it naturally takes a lot of time until the new feature ships with Vim
+this plugin provides the same feature abstracting the implementation details -
+because even current gvim can provide an implementation using the client-server
+feature.
+
+TODO:
+- add more implementations
+- give the user a way to choose the implementation
+
+Thanks to:
+  * Bart Trojanowski who provided the initial C implementation
+  * Sergey Khorev who provided the initial racket (scheme implementation) code
+  * your name? Help providing the missing implementations so that we all can
+    benefit
+
+documentation:
+==================================
+Everything is still in a flux.
+This is a copy paste of the async.txt draft which will be part of the Vim patch.
+So replace async_exec by async#Exec.
+
+
+
+async_exec({ctx})   -- starts an asynchronous process
+
+
+  context keys which will be used:
+  ================================
+    - cmd: the command to be executed. 
+
+    /* idea (which I removed) because split() runs reasonable fast:
+      - aslines (optional): if set a list of lines will be passed to the
+                  functions receiving stdout/ err
+                  You should not change this setting
+    */
+
+    - receive({type}, content) (optional):
+        function receiving stdout/err. If aslines evaluates to true content will
+        be a list of lines. type is always "stdout". (Providing a way for
+        receiving stderr/out separately could be provided - but because Vim is
+        polling the descriptors only once in a while it may be better to let
+        the OS merge both streams)
+
+    - started()    (optional) : called when process was started successfully
+                                Now self.pid should contain the process id
+
+    - terminated() (optional) : called when the process terminated (or when it was killed)
+                                Now self.status should contain the exit status
+
+  context keys which will be assigned:
+  ====================================
+    - pid    : the process pid
+    - status : the process exit status.
+
+  Note: You must not change pid yourself
+
+async_kill({ctx})                -- kills an asynchronous process
+async_list()                     -- returns list of processes
+async_write({ctx}, {string})     -- pass string to stdin of context
+
+TODO:
+async_read_until({ctx}, {string} -- read bytes from stdout until one of the chars contained in string is found
+                                 -- this way you can read lines etc easily.
+                                    Don't know yet how useful it is. This way
+                                    you can implement "blocking" read features
+                                    if you have to.
+                                    Example use case would be completion.
+                                    Another way would be returning no
+                                    completions restarting completion task if
+                                    cursor didn't move and the completion
+                                    results are received by the specified
+                                    receive function
+
+When a process dies it will be removed from the list.
+So keep your own references if you have to.
+
+VIML CODE EXAMPLE: >
+  fun! s:Add(s)
+    let l = [{'text': string(a:s)}]
+    call setqflist(l, 'a')
+  endf
+
+  " ctx 1
+  let ctx = { 'cmd' : 'nr=1; while read f; do nr=`expr $nr + 1`; sleep 1; echo $nr $f - pong; if [ $nr == 5 ]; then break; fi; done; exit 12' }
+  fun ctx.receive(type, text)
+    call s:Add(string(a:text))
+    call async_write(self, "ping\n")
+  endf
+
+  fun ctx.started()
+    call s:Add("ctx1: process started. pid:  ". self.pid)
+  endf
+
+  fun ctx.terminated()
+    call s:Add("ctx1: process died. status (should be 12): ". self.status)
+  endf
+
+  call async_exec(ctx)
+  call async_write(ctx, "ping\n")
+
+
+  " ctx2 2
+  let ctx2 = { 'cmd' : 'find / | while read f; do echo $f; sleep 1; done' }
+
+  fun ctx2.receive(type, text)
+    call s:Add('ctx22: '.string(a:text))
+  endf
+
+  fun ctx2.started()
+    call s:Add("ctx22: process started. pid:  ". self.pid)
+  endf
+
+  fun ctx2.terminated()
+    call s:Add("ctx22: process died. status:  ". self.status)
+  endf
+  call async_exec(ctx2)
+
+
+
