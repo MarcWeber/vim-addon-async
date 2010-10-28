@@ -1,5 +1,13 @@
 WARNING: work in progress. Don't expect this plugin to work yet
 
+:-( currently only the Vim patch for non (gui) version works very well.
+Gui does work, but file descriptors are only polled when typing.
+
+HOWTO:
+1) compile async version of Vim (github.com/MarcWeber/vim branch "work").
+2) Then try one of the examples in the comments above async#LogToBuffer(ctx)
+  ( -> autoload/async.vim )
+
 Bart Trojanowski started working on asystem making it much easier for me
 helping implement a feature Vim was missing for a too long time: async
 communication with external processes.

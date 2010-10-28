@@ -26,34 +26,83 @@ endf
 
 let g:rec = []
 
-" example:
-" call async#LogToBuffer({'cmd':'python -i', 'move_last':1, 'regex_drop': '^>>>$'})
-" call async#LogToBuffer({'cmd':'scala','move_last':1, 'regex_drop': 'scala> $'})
+" joins the lines meant to be sent to a process
+" Eg this example assumes they all lines are prefixed by >
+" example : async#GetLines('^>\zs.*\ze')
+fun! async#GetLines(prefix)
+  let idx = line('.')
+  let lines = []
+  while getline(idx) =~ a:prefix
+    call add(lines, matchstr(getline(idx), a:prefix))
+    let idx -= 1
+  endw
+  return join(reverse(lines),"\n")
+endf
+
+" run an interpreter (eg python, scala, ..), dropping the prompt.
+" This function also handles incomplete lines.
+" 
+" All lines starting with '> ' will be passed to the interpreter.
+" type o to start writing a line, type <space><cr> to sent it.
 "
-" This is still not perfect Sometimes a line is split ..
+" examples:
+"   call async#LogToBuffer({'cmd':'python -i', 'move_last':1, 'prompt': '^>>> $'})
+"   call async#LogToBuffer({'cmd':'scala','move_last':1, 'prompt': 'scala> $'})
+"   call async#LogToBuffer({'cmd':'/bin/sh', 'move_last':1, 'prompt': '^.*\$[$] '})
+"
+"   Example testing that appending to previous lines works correctly:
+"   call async#LogToBuffer({'cmd':'sh -c "es(){ echo -n \$1; sleep 1; }; while read f; do echo \$f; es a; es b; es c; echo; done"', 'move_last':1})
 fun! async#LogToBuffer(ctx)
   let ctx = a:ctx
   let ctx['bufnr'] = bufnr('%')
   sp
   let b:ctx = ctx
-  noremap <buffer> <space><cr> :call<space>async#Write(b:ctx, getline('.')."\n")<cr>
-  inoremap <buffer> <space><cr> <esc>:call<space>async#Write(b:ctx, getline('.')."\n")<cr>
+  let prefix = '> '
+  exec 'noremap <buffer> o o'.prefix
+  exec 'noremap <buffer> O O'.prefix
+  exec 'inoremap <buffer> <cr> <cr>'.prefix
+  exec 'noremap <buffer> <space><cr> :call<space>async#Write(b:ctx, async#GetLines(''^'.prefix.'\zs.*\ze'')."\n")<cr>'
+  exec 'inoremap <buffer> <space><cr> <esc>:call<space>async#Write(b:ctx, async#GetLines(''^'.prefix.'\zs.*\ze'')."\n")<cr>'
   fun! ctx.started()
     call async#AppendBuffer(self.bufnr, "pid: " .self.pid)
   endf
   fun! ctx.receive(type, text)
-    " call append('$', 'rec: '.substitute(substitute(a:text,'\r', '\\r','g'), '\n', '\\n','g'))
-    let lines = split(a:text, '[\r\n]\+')
-    let lines = map(lines, string('out: ').'.v:val')
-    let lines = filter(lines, 'v:val != ""')
-    " call async#AppendBuffer(self.bufnr, lines)
-    if has_key(self,'regex_drop')
-      let lines = filter(lines, 'v:val !~'.string(self.regex_drop))
-    endif
-    call append('$', lines)
-    if has_key(self,'move_last')
-      exec "normal G"
-    endif
+    try
+      " debug output like this
+      " call append('0', 'rec: '.substitute(substitute(a:text,'\r', '\\r','g'), '\n', '\\n','g'))
+
+      " in rare cases it happens that a line is sent in two parts: eg "p" and "rint\n"
+      " write the "p" to the last line, but remember that there was no trailing
+      " \n by assigning it to pending.
+
+      let lines = split(a:text, '[\r\n]\+', 1)
+      if has_key(self, 'pending')
+        " drop pending line, it will be readded with rest of line
+        normal Gdd
+        let lines[0] = self.pending .lines[0]
+      endif
+      if lines[-1] == '' || (has_key(self, 'prompt') &&  lines[-1] =~ self.prompt)
+        " trailing \n or prompt. drop it
+        call remove(lines, -1)
+      else
+        " no trailing \n. Assume continuation will be sent in next block
+        let self.pending = lines[-1]
+        let lines[-1] = lines[-1].' ... waiting for \n'
+      endif
+
+      " let lines = map(lines, string('<: ').'.v:val')
+      let lines = filter(lines, 'v:val != ""')
+      " call async#AppendBuffer(self.bufnr, lines)
+      if has_key(self,'regex_drop')
+        let lines = filter(lines, 'v:val !~'.string(self.regex_drop))
+      endif
+      call append('$', lines)
+      if has_key(self,'move_last')
+        exec "normal G"
+      endif
+    catch /.*/
+      call append('$',v:exception)
+    endtry
   endf
   fun! ctx.terminated()
     call async#AppendBuffer(self.bufnr, "exit code: ". self.status)
