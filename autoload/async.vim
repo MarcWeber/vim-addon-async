@@ -300,20 +300,27 @@ fun! async#DelayUntilNotDisturbing(key, action)
   call async#DelayWhen(a:key, a:action)
 endf
 
+let s:in_rda = 0
+
 " try running delayed actions
 fun! async#RunDelayedActions()
+  " don't call this func recursively
+  if (s:in_rda) | return | endif
+
+  let s:in_rda = 1
   let dict = get(s:async,'delayed-actions',{})
   for [k,delayed_list] in items(dict)
     let idx = 0
     while idx < len(delayed_list)
       let run = 1
       let action=delayed_list[idx]
-      " debug echo string(get(action, 'delay-when', []))
+      let delay = action['delay-when'][0]
+
       for delay in get(action, 'delay-when', [])
         if   (delay == "in-cmdbuf" && s:async.in_cmd)
         \ || (delay == "in-insertmode"  && mode() == 'i')
         \ || (delay == "in-commandline"  && mode() == 'c')
-        \ || (delay[:12] == "buf-invisible" && bufwinnr(delay[14:]) != -1)
+        \ || (delay[:13] == "buf-invisible:" && bufwinnr(1*delay[14:]) == -1)
           let run = 0
         endif
       endfor 
@@ -333,10 +340,10 @@ fun! async#RunDelayedActions()
       endif
     endwhile
     " drop processed:
-    if (idx > 0) | call remove(delayed_list, 0, idx -1) | endif
+    if (idx > 0) | call remove(delayed_list, 0, min([idx -1, len(delayed_list) - 1])) | endif
     if empty(delayed_list)
       unlet dict[k]
     endif
-    
   endfor
+  let s:in_rda = 0
 endf
