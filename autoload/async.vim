@@ -24,12 +24,26 @@ fun! async#ExecInBuffer(bufnr, function, ...)
     " ! Vim may crash. I don't know yet what I'm doing
     call call(function('withcurrentbuffer'), [a:bufnr, a:function] + a:000)
   else
-    " TODO avoid splitting if buffer was open - use lazyredraw etc
-    sp
-    exec 'b '.a:bufnr
-    call call(a:function, a:000)
-    q!
-   endif
+    let this_win = winnr()
+    let other = bufwinnr(a:bufnr)
+    if other == -1
+      " do actions in other buffor to not disturb the layout
+      " TODO avoid splitting if buffer was open - use lazyredraw etc
+      let old_tab = tabpagenr()
+      tabnew
+      exec 'b '.a:bufnr
+      call call(a:function, a:000)
+      q!
+      if old_tab != tabpagenr()
+        normal gT
+      endif
+    else
+      " buffer is visibale. So move cursor there:
+      exec other.'wincmd w'
+      call call(a:function, a:000)
+      exec this_win.'wincmd w'
+    endif
+  endif
 endf
 
 fun! async#AppendBuffer(lines, moveLast)
@@ -119,7 +133,7 @@ fun! async#LogToBuffer(ctx)
       " if has_key(self, 'move_last'))
         " exec "normal G"
       " endif
-      call async#ExecInBuffer(self.bufnr, function('async#AppendBuffer'), lines, has_key(self, 'move_last'))
+      debug call async#ExecInBuffer(self.bufnr, function('async#AppendBuffer'), lines, has_key(self, 'move_last'))
     " catch /.*/
     "  call append('$',v:exception)
     " endtry
@@ -254,3 +268,4 @@ endf
 
 
 " }}}
+abc
