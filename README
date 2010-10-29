@@ -174,4 +174,29 @@ VIML CODE EXAMPLE: >
   call async_exec(ctx2)
 
 
+TODO:
+===============================================================================
+
+* find a way to send interrupt signals (ctrl-c) ?
+
+* LogToBuffer could be made even smarter: make it skip repeating lines. Make it
+
+* find out about the prompt automatically by pressing enter multiple times.
+  (eg irb also prints the line number. So maybe it should not be skipped?)
+
+* Would such a function make sense: ? Maybe even having a timeout?
+
+  async_read_until({ctx}, {string} -- read bytes from stdout until one of the
+                                    chars contained in string is found
+                                 -- this way you can read lines etc easily.
+                                    Don't know yet how useful it is. This way
+                                    you can implement "blocking" read features
+                                    if you have to.
+                                    Example use case would be completion.
+                                    Another way would be returning no
+                                    completions restarting completion task if
+                                    cursor didn't move and the completion
+                                    results are received by the specified
+                                    receive function
+
 
