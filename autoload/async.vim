@@ -61,11 +61,15 @@ let g:rec = []
 " joins the lines meant to be sent to a process
 " Eg this example assumes they all lines are prefixed by >
 " example : async#GetLines('^>\zs.*\ze')
+" Lines which have been executed are prefixed by ' ' so that they won't be
+" executed a second time (some commands don't have a result)
 fun! async#GetLines(prefix)
   let idx = line('.')
   let lines = []
   while getline(idx) =~ a:prefix
-    call add(lines, matchstr(getline(idx), a:prefix))
+    let l = getline(idx)
+    call add(lines, matchstr(l, a:prefix))
+    call setline(idx, ' '.l)
     let idx -= 1
   endw
   return join(reverse(lines),"\n")

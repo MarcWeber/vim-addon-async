@@ -1,17 +1,87 @@
-WARNING: work in progress. (tested on Linux only)
+GOAL (provide API for Vim users)
+==============================================================================
+provide an async communication interface for VimL which can be implemented in different ways.
 
-Two ways:
+It looks like this:
 
-HOWTO:
-======================
+  let ctx = { 'cmd' : '/bin/sh' }
+  fun ctx.receive(type, data)
+    echo "got data: ".a:data
+    " now that we have the date the process is no longer needed:
+    call async#Kill(self)
+  endf
+  call async#Start(ctx)
+  call async#Write(ctx, "date") # run date
 
-1) provide support for an async implementation:
+What's nice about this design? You can add your own state to the context easily.
+Eg the LogToBuffer keeps state in a "pending" key which makes the code aware about
+whether the last block of bytes contained a "\n" character at the end or not.
+
+For debugger implementations etc this means you can keep lists of breakpoints
+etc easily.
+
+Different implementations will be provided. See below.
+
+porcelain LogToBuffer running interactive interpreter shells within Vim buffers:
+==============================================================================
+
+How powerful this simple interface is is illustrated by
+LogToBuffer which is porcelain on top of the API:
+
+  call async#LogToBuffer({'cmd':'python -i', 'move_last':1, 'prompt': '^>>> $'})
+  then type:
+    oprint "abc"<space><cr>
+  (everything started by "> " will be treated as text to be sent to python when
+  <space><cr> is typed in insert mode
+
+  See commentary of the LogToBuffer function has more sophisticated examples.
+
+  Sample python session:
+
+  pid: 24067
+  Python 2.6.5 (r265:79063, May  9 2010, 14:26:02) 
+  [GCC 4.4.3] on linux2
+  Type "help", "copyright", "credits" or "license" for more information.
+   > print "hello world"
+  hello world
+   > num1 =  40
+   > num2 = 42
+   > for i in range(num1, num2):
+   >    print i
+   > 
+  ... ... 40
+  41
+  > typing here ...
+
+Pay attention to the indentation level. The lines which have been executed
+are indented by one space so that they are not executed again because lines
+like "num1 = 40" don't return anything in python.
+The following lines have been sent in one go:
+
+   > for i in range(num1, num2):
+   >    print i
+   > 
+
+(the ... sent by the interpreter still has to be removed ! TODO)
+
+
+Note: because adding lines to background buffers are be annoying actions can be
+delayed. In the LogToBuffer updates are delayed when
+- you're in insert mode (Vim should not disturb you when typing)
+- you're in command line or command win buffer (q:)
+  Reason: You can't switch buffers or tabs when its open.
+
+installation & implementation details:
+===============================================================================
+
+For now I recommend using impl 2) (gvim) or impl 1) (non gui version of Vim)
 
   impl 1 native):
   ================
 
       compile my async version of Vim (github.com/MarcWeber/vim branch "work").
       (-) doesn't work in gui very well yet. That's why its not used in that case
+      (-) patch as to be tested with valgrind and tidied up
 
   impl 2 c_executable):
   ================
@@ -33,92 +103,34 @@ HOWTO:
   - python (also calling back into Vim cause its not threadsafe, but passing
     data to Python could be done easily)
 
-2) Then try one of the examples in the comments above async#LogToBuffer(ctx)
-  ( -> autoload/async.vim )
-
-  Example:
-  call async#LogToBuffer({'cmd':'python -i', 'move_last':1, 'prompt': '^>>> $'})
-  then type:
-    oprint "abc"<space><cr>
 
 credits:
-================
+===============================================================================
 Thanks to:
 
   * Bart Trojanowski who provided the initial C implementation of the Vim patch
     (Thus he did most of the work)
 
   * Sergey Khorev who provided the initial racket (scheme implementation) code
+    Someone (me?) still has to make it complete.
 
 
-documentation:
-==================================
-Everything is still in a flux.
-This is a copy paste of the async.txt draft which will be part of the Vim patch.
-So replace async_exec by async#Exec.
+related work:
+==============================================================================
+Nico Raffo told me that he's been working on a idle timer like event for Vim.
+This would be another perfect match to provide a different implementation.
 
-async_exec({ctx})   -- starts an asynchronous process
+  vimproc plugin
+  http://github.com/Shougo/vimproc/tree/master/doc/
+
+  Conque Shell plugin:
+  http://code.google.com/p/conque
+
+IMHO their only issue is that they block Vim if have long running tasks.
 
 
-  context keys which will be used:
-  ================================
-    - cmd: the command to be executed. 
-
-    /* idea (which I removed) because split() runs reasonable fast:
-      - aslines (optional): if set a list of lines will be passed to the
-                  functions receiving stdout/ err
-                  You should not change this setting
-    */
-
-    - receive({type}, content) (optional):
-        function receiving stdout/err. If aslines evaluates to true content will
-        be a list of lines. type is always "stdout". (Providing a way for
-        receiving stderr/out separately could be provided - but because Vim is
-        polling the descriptors only once in a while it may be better to let
-        the OS merge both streams)
-
-    - started()    (optional) : called when process was started successfully
-                                Now self.pid should contain the process id
-
-    - terminated() (optional) : called when the process terminated (or when it was killed)
-                                Now self.status should contain the exit status
-
-  context keys which will be assigned:
-  ====================================
-    - pid    : the process pid
-    - status : the process exit status.
-
-  Note: You must not change pid yourself
-
-async_kill({ctx})                -- kills an asynchronous process
-async_list()                     -- returns list of processes
-async_write({ctx}, {string})     -- pass string to stdin of context
-
-TODO:
-
-improve documentation
-
-find a way to send interrupt signals (ctrl-c) ?
-
-Make LogToBuffer even smarter: make it skip repeating lines. Make it find out
-about the prompt automatically by pressing enter multiple times.
-(eg irb also prints the line number. So maybe it should not be skipped?)
-
-async_read_until({ctx}, {string} -- read bytes from stdout until one of the
-                                    chars contained in string is found
-                                 -- this way you can read lines etc easily.
-                                    Don't know yet how useful it is. This way
-                                    you can implement "blocking" read features
-                                    if you have to.
-                                    Example use case would be completion.
-                                    Another way would be returning no
-                                    completions restarting completion task if
-                                    cursor didn't move and the completion
-                                    results are received by the specified
-                                    receive function
-
-When a process dies it will be removed from the list.
-So keep your own references if you have to.
+yet two another examples:
+==============================================================================
 
 VIML CODE EXAMPLE: >
   fun! s:Add(s)
