@@ -95,6 +95,13 @@ async_list()                     -- returns list of processes
 async_write({ctx}, {string})     -- pass string to stdin of context
 
 TODO:
+
+improve documentation
+
+Make LogToBuffer even smarter: make it skip repeating lines. Make it find out
+about the prompt automatically by pressing enter multiple times.
+(eg irb also prints the line number. So maybe it should not be skipped?)
+
 async_read_until({ctx}, {string} -- read bytes from stdout until one of the
                                     chars contained in string is found
                                  -- this way you can read lines etc easily.
