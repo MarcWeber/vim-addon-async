@@ -133,7 +133,7 @@ fun! async#LogToBuffer(ctx)
       " if has_key(self, 'move_last'))
         " exec "normal G"
       " endif
-      debug call async#ExecInBuffer(self.bufnr, function('async#AppendBuffer'), lines, has_key(self, 'move_last'))
+      call async#ExecInBuffer(self.bufnr, function('async#AppendBuffer'), lines, has_key(self, 'move_last'))
     " catch /.*/
     "  call append('$',v:exception)
     " endtry
@@ -176,9 +176,8 @@ elseif s:Select('c_executable', 1) && executable(s:async_helper_path)
     " notification
     let ctx.tmp_from_vim = tempname()
     let ctx.tmp_from_vim2 = tempname()
-    let ctx.tmp_to_vim = tempname()
     " start background process
-    let cmd = s:async_helper_path.' vim '.join(map([v:servername, s:process_id, ctx.tmp_from_vim, ctx.tmp_to_vim, ctx.cmd], 'shellescape(v:val)'),' ').'&'
+    let cmd = s:async_helper_path.' vim '.join(map([v:servername, s:process_id, ctx.tmp_from_vim, ctx.cmd], 'shellescape(v:val)'),' ').'&'
     " let g:cmd = cmd
     call system(cmd)
     let s:process_id += 1
@@ -229,14 +228,12 @@ fun! async#Receive(processId, data)
     let ctx.pid = 1 * data
     call ctx.started()
   elseif message == "d"
-    " eval es evil .. but its the only way to preserve \r \n in input
-    " because a tempname is used I think its ok
-    call ctx.receive("stdout", eval(readfile(ctx.tmp_to_vim,'b')[0]))
-    call delete(ctx.tmp_to_vim)
+    call ctx.receive("stdout", data)
   elseif message == "k"
     let ctx.status = 1 * data
     call ctx.terminated()
   endif
+  redraw
 endf
 
 " documentation see README

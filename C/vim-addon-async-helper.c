@@ -19,11 +19,7 @@
  * from-vim-file: Vim will write to this file. The loop will pick it up and feed
  * it into stdin of the process.
  *
- * to-vim-file
- *
- * If stdout/err text is received the data is stored as serialized Vim string
- * (so that \n \r are preserved). Then a remote call is into Vim is done to
- * make it read and process it
+ * If stdout/err text is received the data is send to viem using --remote-expr
  *
  * I'm not a C programmer. So this code may contain bugs. Bear with me and help
  * me improve it. But hey, it works!
@@ -32,7 +28,7 @@
  */ 
 
 void usage(char * name){
-  printf("%s vim-executable vim-server-name process_id from-vim-file to-vim-file cmd\n", name);
+  printf("%s vim-executable vim-server-name process_id from-vim-file cmd\n", name);
 }
 
 static void
@@ -104,13 +100,13 @@ void send(char * vimExecutable, char *vimServerName, char * processId, char * bu
   char quoted[2*BUF_SIZE+3];
 
   vimQuote(buf, quoted);
-  snprintf(command, sizeof(command), "<esc>:call async#Receive(\"%s\", %s)<cr>", processId, quoted);
+  snprintf(command, sizeof(command), "async#Receive(\"%s\", %s)", processId, quoted);
 
   char * argv3[6];
   argv3[0] = vimExecutable;
   argv3[1] = "--servername";
   argv3[2] = vimServerName;
-  argv3[3] = "--remote-send";
+  argv3[3] = "--remote-expr";
   printf("command is %s\n", command);
   argv3[4] = command;
   argv3[5] = NULL;
@@ -144,7 +140,7 @@ int main(int argc, char * argv[])
 {
 
   int i;
-  if (argc < 7) {
+  if (argc < 6) {
     usage(argv[0]);
   } else {
     argv++; argc--;
@@ -152,8 +148,7 @@ int main(int argc, char * argv[])
     char * vimServerName = argv[1];
     char * processId     = argv[2];
     char * inputFile     = argv[3]; // from Vim to this tool
-    char * writeFile     = argv[4]; // stdout to Vim
-    char * cmd           = argv[5];
+    char * cmd           = argv[4];
     int    pipe_error = 0;
 
 
@@ -265,28 +260,12 @@ int main(int argc, char * argv[])
          ret--;
          // read_bytes and send buf to Vim
 
-         read_bytes = read(fd_from, buf, BUF_SIZE-1);
-         buf[read_bytes] = 0;
-         printf("sending bytes: %s\n", buf);
-         char quoted[2*BUF_SIZE+3];
-         // serialize as string because Vim can't preserve \n \r when reading :-(
-         vimQuote(buf, quoted);
-
-         FILE * out = fopen(writeFile, "w+");
-         fwrite(&quoted, strlen(quoted), 1, out);
-         fclose(out);
-         printf("file for vim written, calling vim\n");
-         send(vimExecutable, vimServerName, processId, "d", read_bytes + 1);
+         buf[0] = 'd';
+         read_bytes = read(fd_from, &buf[1], BUF_SIZE-1);
+         buf[read_bytes+1] = 0;
+         printf("sending bytes: %s\n", &buf[1]);
+         send(vimExecutable, vimServerName, processId, buf, read_bytes + 1);
          // wait until Vim has read the data
-         
-         printf("waiting for vim to remove file\n");
-         while (out = fopen(writeFile, "r")){
-           fclose(out);
-           // abuse select for sleeping
-           int ret = select(0, NULL, NULL, NULL, &tv);
-         }
-         printf("waiting finished\n");
-
          if (read_bytes == 0)
            goto terminate;
        }  else {
