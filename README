@@ -1,39 +1,60 @@
-WARNING: work in progress. Don't expect this plugin to work yet
+WARNING: work in progress. (tested on Linux only)
 
-:-( currently only the Vim patch for non (gui) version works very well.
-Gui does work, but file descriptors are only polled when typing.
+Two ways:
 
 HOWTO:
-1) compile async version of Vim (github.com/MarcWeber/vim branch "work").
+======================
+
+1) provide support for an async implementation:
+
+  impl 1 native):
+  ================
+
+      compile my async version of Vim (github.com/MarcWeber/vim branch "work").
+      (-) doesn't work in gui very well yet. That's why its not used in that case
+
+  impl 2 c_executable):
+  ================
+
+      compile C/vim-addon-async-helper.c
+      (-) requires client server (X connection or the like
+      (-) 20ms delay (vim -> app)
+
+  impl 3 possible others):
+  ================
+  - mzscheme (racket)
+    implementation using threads. That would be the only solution working
+    everywhere.
+    (+) portable)
+    (-) not implemented yet
+    (_) very view users have mzscheme support
+ 
+  - python (also calling back into Vim cause its not threadsafe, but passing
+    data to Python could be done easily)
+
 2) Then try one of the examples in the comments above async#LogToBuffer(ctx)
   ( -> autoload/async.vim )
 
-Bart Trojanowski started working on asystem making it much easier for me
-helping implement a feature Vim was missing for a too long time: async
-communication with external processes.
+  Example:
+  call async#LogToBuffer({'cmd':'python -i', 'move_last':1, 'prompt': '^>>> $'})
+  then type:
+    oprint "abc"<space><cr>
 
-Because it naturally takes a lot of time until the new feature ships with Vim
-this plugin provides the same feature abstracting the implementation details -
-because even current gvim can provide an implementation using the client-server
-feature.
-
-TODO:
-- add more implementations
-- give the user a way to choose the implementation
-
+credits:
+================
 Thanks to:
-  * Bart Trojanowski who provided the initial C implementation
+
+  * Bart Trojanowski who provided the initial C implementation of the Vim patch
+    (Thus he did most of the work)
+
   * Sergey Khorev who provided the initial racket (scheme implementation) code
-  * your name? Help providing the missing implementations so that we all can
-    benefit
+
 
 documentation:
 ==================================
 Everything is still in a flux.
 This is a copy paste of the async.txt draft which will be part of the Vim patch.
 So replace async_exec by async#Exec.
-
-
 
 async_exec({ctx})   -- starts an asynchronous process
 
@@ -73,7 +94,8 @@ async_list()                     -- returns list of processes
 async_write({ctx}, {string})     -- pass string to stdin of context
 
 TODO:
-async_read_until({ctx}, {string} -- read bytes from stdout until one of the chars contained in string is found
+async_read_until({ctx}, {string} -- read bytes from stdout until one of the
+                                    chars contained in string is found
                                  -- this way you can read lines etc easily.
                                     Don't know yet how useful it is. This way
                                     you can implement "blocking" read features
