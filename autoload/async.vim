@@ -4,6 +4,9 @@
 " - python  or external C executable calling back into Vim using client-server
 "   feature
 
+" defined in plugin file
+let s:async = g:async
+
 if !exists('g:async_implementation')
   let g:async_implementation = 'auto'
 endif
@@ -98,7 +101,10 @@ fun! async#LogToBuffer(ctx)
   fun! ctx.started()
     call async#ExecInBuffer(self.bufnr, function('async#AppendBuffer'), "pid: " .self.pid, 1)
   endf
-  fun! ctx.receive(type, text)
+  fun! ctx.receive(...)
+    call async#DelayUntilNotDisturbing('process-pid'. self.pid, {'delay-when': ['buf-invisible:'. self.bufnr], 'fun' : self.delayed_work, 'args': a:000, 'self': self} )
+  endf
+  fun! ctx.delayed_work(type, text)
     " try
       " debug output like this
       " call append('0', 'rec: '.substitute(substitute(a:text,'\r', '\\r','g'), '\n', '\\n','g'))
@@ -265,4 +271,72 @@ endf
 
 
 " }}}
-abc
+
+" delayed processing {{{1
+" There are some states when you don't want any updates. Eg
+" when editing in the command window.
+"
+" action: dict whith keys
+"   - self (optional)
+"   - args (optional)
+"   - fun or exec
+"   - delay-when:  list of conditions when the action should not be run.
+"       "buf-invisible:bufnr"
+"       "in-cmdbuf"
+"       "in-insertmode"
+"       (more to be added)
+fun! async#DelayWhen(key, action)
+  let dict = get(s:async,'delayed-actions',{})
+  let s:async['delayed-actions'] = dict
+  let list = get(dict, a:key, [])
+  call add(list, a:action)
+  let dict[a:key] = list
+  call async#RunDelayedActions()
+endf
+
+
+fun! async#DelayUntilNotDisturbing(key, action)
+  let a:action['delay-when'] = get(a:action,'delay-when', []) + ["in-cmdbuf","in-insertmode","in-commandline"]
+  call async#DelayWhen(a:key, a:action)
+endf
+
+" try running delayed actions
+fun! async#RunDelayedActions()
+  let dict = get(s:async,'delayed-actions',{})
+  for [k,delayed_list] in items(dict)
+    let idx = 0
+    while idx < len(delayed_list)
+      let run = 1
+      let action=delayed_list[idx]
+      " debug echo string(get(action, 'delay-when', []))
+      for delay in get(action, 'delay-when', [])
+        if   (delay == "in-cmdbuf" && s:async.in_cmd)
+        \ || (delay == "in-insertmode"  && mode() == 'i')
+        \ || (delay == "in-commandline"  && mode() == 'c')
+        \ || (delay[:12] == "buf-invisible" && bufwinnr(delay[14:]) != -1)
+          let run = 0
+        endif
+      endfor 
+      if run
+        " run action
+        let idx = idx + 1
+        if has_key(action,'exec')
+          exec action.exec
+        else
+          let args = [action.fun]
+          call add(args, get(action,'args',[]))
+          if has_key(action, 'self') | call add(args, action.self) | endif
+          call call(function('call'), args)
+        endif
+      else
+        break
+      endif
+    endwhile
+    " drop processed:
+    if (idx > 0) | call remove(delayed_list, 0, idx -1) | endif
+    if empty(delayed_list)
+      unlet dict[k]
+    endif
+    
+  endfor
+endf
