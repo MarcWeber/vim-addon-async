@@ -12,18 +12,30 @@ let s:impl = {'supported': 'no'}
 
 " tool {{{ 1
 
-fun! async#AppendBuffer(bnr, lines, moveLast)
-  if 0 && exists('*withcurrentbuffer')
-    call withcurrentbuffer(a:bnr, function('append'), [a:lines])
-   else
-     " TODO avoid splitting if buffer was open - use lazyredraw etc
-     sp
-     exec 'b '.a:bnr
-     call append('$', a:lines)
-     if a:moveLast
-       exec "normal G"
-     endif
-     q!
+fun! async#ExecAllArgs(...)
+  for e in a:000
+    exec e
+  endfor
+endf
+
+fun! async#ExecInBuffer(bufnr, function, ...)
+  if exists('*withcurrentbuffer')
+    " this is an experimental hack !
+    " ! Vim may crash. I don't know yet what I'm doing
+    call call(function('withcurrentbuffer'), [a:bufnr, a:function] + a:000)
+  else
+    " TODO avoid splitting if buffer was open - use lazyredraw etc
+    sp
+    exec 'b '.a:bufnr
+    call call(a:function, a:000)
+    q!
+   endif
+endf
+
+fun! async#AppendBuffer(lines, moveLast)
+   call append('$', a:lines)
+   if a:moveLast
+     normal G
    endif
 endf
 
@@ -51,10 +63,13 @@ endf
 " examples:
 "   call async#LogToBuffer({'cmd':'python -i', 'move_last':1, 'prompt': '^>>> $'})
 "   call async#LogToBuffer({'cmd':'scala','move_last':1, 'prompt': 'scala> $'})
-"   call async#LogToBuffer({'cmd':'/bin/sh', 'move_last':1, 'prompt': '^.*\$[$] '})
 "
 "   Example testing that appending to previous lines works correctly:
 "   call async#LogToBuffer({'cmd':'sh -c "es(){ echo -n \$1; sleep 1; }; while read f; do echo \$f; es a; es b; es c; echo; done"', 'move_last':1})
+"
+"   call async#LogToBuffer({'cmd':'/bin/sh', 'move_last':1, 'prompt': '^.*\$[$] '})
+"   then try running this:
+"   yes | { es(){ echo -n $1; sleep 1; }; while read f; do echo $f; es a; es b; es c; echo; done; }
 fun! async#LogToBuffer(ctx)
   let ctx = a:ctx
   sp | enew
@@ -67,10 +82,10 @@ fun! async#LogToBuffer(ctx)
   exec 'noremap <buffer> <space><cr> :call<space>async#Write(b:ctx, async#GetLines(''^'.prefix.'\zs.*\ze'')."\n")<cr>'
   exec 'inoremap <buffer> <space><cr> <esc>:call<space>async#Write(b:ctx, async#GetLines(''^'.prefix.'\zs.*\ze'')."\n")<cr>'
   fun! ctx.started()
-    call async#AppendBuffer(self.bufnr, "pid: " .self.pid, 1)
+    call async#ExecInBuffer(self.bufnr, function('async#AppendBuffer'), "pid: " .self.pid, 1)
   endf
   fun! ctx.receive(type, text)
-    try
+    " try
       " debug output like this
       " call append('0', 'rec: '.substitute(substitute(a:text,'\r', '\\r','g'), '\n', '\\n','g'))
 
@@ -81,7 +96,7 @@ fun! async#LogToBuffer(ctx)
       let lines = split(a:text, '[\r\n]\+', 1)
       if has_key(self, 'pending')
         " drop pending line, it will be readded with rest of line
-        normal Gdd
+        call async#ExecInBuffer(self.bufnr, function('async#ExecAllArgs'), "normal Gdd")
         let lines[0] = self.pending .lines[0]
       endif
       if lines[-1] == '' || (has_key(self, 'prompt') &&  lines[-1] =~ self.prompt)
@@ -104,13 +119,13 @@ fun! async#LogToBuffer(ctx)
       " if has_key(self, 'move_last'))
         " exec "normal G"
       " endif
-      call async#AppendBuffer(self.bufnr, lines, has_key(self, 'move_last'))
-    catch /.*/
-      call append('$',v:exception)
-    endtry
+      call async#ExecInBuffer(self.bufnr, function('async#AppendBuffer'), lines, has_key(self, 'move_last'))
+    " catch /.*/
+    "  call append('$',v:exception)
+    " endtry
   endf
   fun! ctx.terminated()
-    call async#AppendBuffer(self.bufnr, "exit code: ". self.status, 1)
+    call async#ExecInBuffer(self.bufnr, function('async#AppendBuffer'), ["exit code: ". self.status], has_key(self, 'move_last'))
   endf
   call async#Exec(ctx)
   return ctx
@@ -125,7 +140,8 @@ fun! s:Select(name, p)
 endf
 
 let s:async_helper_path = fnamemodify(expand('<sfile>'),':h:h').'/C/vim-addon-async-helper'
-if s:Select('native', exists('*async_exec')) && !has('gui') 
+
+if s:Select('native', exists('*async_exec')) && !has('gui_running') 
   " Vim async impl
   for i in ['exec','kill','write','list']
     let s:impl[i] = function('async_'.i)
@@ -139,15 +155,16 @@ elseif s:Select('c_executable', 1) && executable(s:async_helper_path)
   let s:process_id = 1
 
   fun! s:impl.exec(ctx)
+    let ctx = a:ctx
     let s:processes[s:process_id] = a:ctx
     " input_file2 will be moved to input_file
     " stdout_file is used to pass data back to Vim after async#Receive
     " notification
-    let a:ctx.tmp_from_vim = tempname()
-    let a:ctx.tmp_from_vim2 = tempname()
-    let a:ctx.tmp_to_vim = tempname()
+    let ctx.tmp_from_vim = tempname()
+    let ctx.tmp_from_vim2 = tempname()
+    let ctx.tmp_to_vim = tempname()
     " start background process
-    let cmd = s:async_helper_path.' vim '.join(map([v:servername, s:process_id, a:ctx.tmp_from_vim, a:ctx.tmp_to_vim, a:ctx.cmd], 'shellescape(v:val)'),' ').'&'
+    let cmd = s:async_helper_path.' vim '.join(map([v:servername, s:process_id, ctx.tmp_from_vim, ctx.tmp_to_vim, ctx.cmd], 'shellescape(v:val)'),' ').'&'
     " let g:cmd = cmd
     call system(cmd)
     let s:process_id += 1

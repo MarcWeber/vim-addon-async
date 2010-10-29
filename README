@@ -16,7 +16,8 @@ HOWTO:
   impl 2 c_executable):
   ================
 
-      compile C/vim-addon-async-helper.c
+      compile C/vim-addon-async-helper.c:
+      cd C; gcc -o vim-addon-async-helper vim-addon-async-helper.c
       (-) requires client server (X connection or the like
       (-) 20ms delay (vim -> app)
 
