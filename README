@@ -98,6 +98,8 @@ TODO:
 
 improve documentation
 
+find a way to send interrupt signals (ctrl-c) ?
+
 Make LogToBuffer even smarter: make it skip repeating lines. Make it find out
 about the prompt automatically by pressing enter multiple times.
 (eg irb also prints the line number. So maybe it should not be skipped?)
