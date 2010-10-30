@@ -7,6 +7,12 @@
 " defined in plugin file
 let s:async = g:async
 
+if !exists('s:sync.processes')
+  let s:async.processes = {}
+  let s:vim_process_id = 1
+endif
+
+" preferred async implementation. See README
 if !exists('g:async_implementation')
   let g:async_implementation = 'auto'
 endif
@@ -22,30 +28,24 @@ fun! async#ExecAllArgs(...)
 endf
 
 fun! async#ExecInBuffer(bufnr, function, ...)
-  if exists('*withcurrentbuffer')
-    " this is an experimental hack !
-    " ! Vim may crash. I don't know yet what I'm doing
-    call call(function('withcurrentbuffer'), [a:bufnr, a:function] + a:000)
-  else
-    let this_win = winnr()
-    let other = bufwinnr(a:bufnr)
-    if other == -1
-      " do actions in other buffor to not disturb the layout
-      " TODO avoid splitting if buffer was open - use lazyredraw etc
-      let old_tab = tabpagenr()
-      tabnew
-      exec 'b '.a:bufnr
-      call call(a:function, a:000)
-      q!
-      if old_tab != tabpagenr()
-        normal gT
-      endif
-    else
-      " buffer is visibale. So move cursor there:
-      exec other.'wincmd w'
-      call call(a:function, a:000)
-      exec this_win.'wincmd w'
+  let this_win = winnr()
+  let other = bufwinnr(a:bufnr)
+  if other == -1
+    " do actions in other buffor to not disturb the layout
+    " TODO avoid splitting if buffer was open - use lazyredraw etc
+    let old_tab = tabpagenr()
+    tabnew
+    exec 'b '.a:bufnr
+    call call(a:function, a:000)
+    q!
+    if old_tab != tabpagenr()
+      normal gT
     endif
+  else
+    " buffer is visibale. So move cursor there:
+    exec other.'wincmd w'
+    call call(a:function, a:000)
+    exec this_win.'wincmd w'
   endif
 endf
 
@@ -100,15 +100,15 @@ fun! async#LogToBuffer(ctx)
   exec 'noremap <buffer> o o'.prefix
   exec 'noremap <buffer> O O'.prefix
   exec 'inoremap <buffer> <cr> <cr>'.prefix
-  exec 'noremap <buffer> <space><cr> :call<space>async#Write(b:ctx, async#GetLines(''^'.prefix.'\zs.*\ze'')."\n")<cr>'
-  exec 'inoremap <buffer> <space><cr> <esc>:call<space>async#Write(b:ctx, async#GetLines(''^'.prefix.'\zs.*\ze'')."\n")<cr>'
+  exec 'noremap <buffer> <space><cr> :call<space>b:ctx.write(async#GetLines(''^'.prefix.'\zs.*\ze'')."\n")<cr>'
+  exec 'inoremap <buffer> <space><cr> <esc>:call<space>b:ctx.write(async#GetLines(''^'.prefix.'\zs.*\ze'')."\n")<cr>'
   fun! ctx.started()
     call async#ExecInBuffer(self.bufnr, function('async#AppendBuffer'), "pid: " .self.pid, 1)
   endf
   fun! ctx.receive(...)
     call async#DelayUntilNotDisturbing('process-pid'. self.pid, {'delay-when': ['buf-invisible:'. self.bufnr], 'fun' : self.delayed_work, 'args': a:000, 'self': self} )
   endf
-  fun! ctx.delayed_work(type, text)
+  fun! ctx.delayed_work(text, ...)
     " try
       " debug output like this
       " call append('0', 'rec: '.substitute(substitute(a:text,'\r', '\\r','g'), '\n', '\\n','g'))
@@ -159,120 +159,125 @@ endf
 
 " implementation {{{ 1
 
-fun! s:Select(name, p)
-  return (a:p && g:async_implementation == 'auto') || a:name == g:async_implementation
-endf
-
 let s:async_helper_path = fnamemodify(expand('<sfile>'),':h:h').'/C/vim-addon-async-helper'
 
-if s:Select('native', exists('*async_exec')) && !has('gui_running') 
-  " Vim async impl
-  for i in ['exec','kill','write','list']
-    let s:impl[i] = function('async_'.i)
-  endfor
-  let s:impl['supported'] = 'native'
+fun! async#List()
+  " native implementation also keeps track of a list (func async_list)
+  return s:async.processes
+endf
 
-elseif s:Select('c_executable', 1) && executable(s:async_helper_path)
+" ctx must have key "cmd"
+" the following functions will be added:
+"
+" ctx.kill() # kill the process
+" ctx.signal('interrupt')
+" ctx.write(data [, fd ] ) fd not implemented yet
+"
+" Some keys will be added depending on the implementation
+fun! async#Exec(ctx)
+  let ctx = a:ctx
+  let ctx.vim_process_id = s:vim_process_id
+  let s:vim_process_id += 1
+  let s:async.processes[ctx.vim_process_id] = ctx
 
-  " client-server callback is async#Receive
-  let s:processes = {}
-  let s:process_id = 1
+  " try finding supported implementation:
+  let impl = get(ctx,'implementation', 'auto')
+  if impl == 'auto'
+    if exists('*async_exec') && !has('gui_running')
+      let impl = 'native'
+    elseif has('clientserver') && v:servername != '' && executable(s:async_helper_path)
+      let impl = "c_executable"
+    else
+      throw "no way to execute process. You must either have a patched Vim or  v:servername, != '' && has('clientserver') && executable(".s:async_helper_path.") "
+  endif
 
-  fun! s:impl.exec(ctx)
-    let ctx = a:ctx
-    let s:processes[s:process_id] = a:ctx
+  let ctx.implementation = impl
+
+  " add missing functions to ctx depending no chosen implementation
+  if impl == 'native' " native {{{2
+
+    fun ctx.kill()
+      call async_kill(self)
+    endf
+
+    fun ctx.write(input)
+      call async_write(self, a:input)
+    endf
+
+    " on termination we have to unregister the ctx from the list
+    " So override the terminated callback:
+    if has_key(ctx, 'terminated')
+      let ctx.terminated_user = ctx.terminated
+    endif
+    fun ctx.terminated()
+      if has_key(self,'terminated_user')
+        call self.terminated_user()
+      endif
+      unlet s:async.processes[self.vim_process_id]
+    endf
+
+  elseif impl == 'c_executable' " c_executable {{{2
+
     " input_file2 will be moved to input_file
     " stdout_file is used to pass data back to Vim after async#Receive
     " notification
     let ctx.tmp_from_vim = tempname()
     let ctx.tmp_from_vim2 = tempname()
     " start background process
-    let cmd = s:async_helper_path.' vim '.join(map([v:servername, s:process_id, ctx.tmp_from_vim, ctx.cmd], 'shellescape(v:val)'),' ').'&'
+    let cmd = s:async_helper_path.' vim '.join(map([v:servername, ctx.vim_process_id, ctx.tmp_from_vim, ctx.cmd], 'shellescape(v:val)'),' ')
+    let ctx['log-c_executable'] = tempname()
     " let g:cmd = cmd
-    call system(cmd)
-    let s:process_id += 1
-  endf
-  fun! s:impl.kill(ctx)
-    exec '!pkill '. a:ctx.pid
-  endf
-  fun! s:impl.write(ctx, input)
-    if  (-1 == writefile(split(a:input,"\n",1), a:ctx.tmp_from_vim2, 'b'))
-      echoe "writing vim to  tool file failed!"
-    endif
-    " mv so that its an atomic operation (make sure the process does't read a
-    " half written file)
-    call rename(a:ctx.tmp_from_vim2, a:ctx.tmp_from_vim)
-    " wait until the proces removed the file
-    let start_waiting = localtime()
-    while (filereadable(a:ctx.tmp_from_vim))
-      if localtime() - start_waiting > 10
-        echoe "external helper process didn't read the input file !"
-        " vim will clean up tmp file on shutdown
-        return
+    call system(cmd. ' &> '. ctx['log-c_executable'].'&')
+
+    fun ctx.kill()
+      exec 'pkill -9 '. self.pid
+    endf
+
+    fun ctx.write(input)
+      if  (-1 == writefile(split(a:input,"\n",1), self.tmp_from_vim2, 'b'))
+        echoe "writing vim to  tool file failed!"
       endif
-    endw
-  endf
-  fun! s:impl.list()
-    return s:processes
-  endf
+      " mv so that its an atomic operation (make sure the process does't read a
+      " half written file)
+      call rename(self.tmp_from_vim2, self.tmp_from_vim)
+      " wait until the proces removed the file
+      let start_waiting = localtime()
+      while (filereadable(self.tmp_from_vim))
+        if localtime() - start_waiting > 10
+          echoe "external helper process didn't read the input file !"
+          " vim will clean up tmp file on shutdown
+          return
+        endif
+      endw
+    endf
 
-elseif s:Select('mzscheme', has('mzscheme'))
+  endif " }}}
 
-  " TODO (racket implementation ?)
-  
-elseif s:Select('python', has('python'))
+  return ctx
+endf
 
-  " TODO python implementation calling back into vim using client-server
-
-endif
-
+" helper function c_executable
 fun! async#Receive(processId, data)
-  if !has_key(s:processes, a:processId)
+  echoe "received"
+  if !has_key(s:async.processes, a:processId)
     echoe "async#Receive called with unkown vim process identifier"
     return
   endif
-  let ctx = s:processes[a:processId]
+  let ctx = s:async.processes[a:processId]
   let message = a:data[:0]
   let data = a:data[1:]
   if message == "p"
     let ctx.pid = 1 * data
     call ctx.started()
   elseif message == "d"
-    call ctx.receive("stdout", data)
+    call ctx.receive(data, 1)
   elseif message == "k"
     let ctx.status = 1 * data
     call ctx.terminated()
+    unlet s:async.processes[a:processId]
   endif
   redraw
 endf
-
-" documentation see README
-
-" returns either "no" or the implementation being used
-fun! async#Supported()
-  return s:impl.supported
-endf
-
-fun! async#Exec(ctx)
-  return s:impl.exec(a:ctx)
-endf
-
-fun! async#Kill(ctx)
-  return s:impl.kill(a:ctx)
-endf
-
-fun! async#Write(ctx, input)
-  return s:impl.write(a:ctx, a:input)
-endf
-
-fun! async#List()
-  return s:impl.list()
-endf
-"
-" does this make sense?
-" fun! async#Read(ctx)
-" endf
-
 
 " }}}
 

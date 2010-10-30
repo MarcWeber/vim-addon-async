@@ -5,13 +5,14 @@ provide an async communication interface for VimL which can be implemented in di
 It looks like this:
 
   let ctx = { 'cmd' : '/bin/sh' }
-  fun ctx.receive(type, data)
+  fun ctx.receive(data, ...)
+    " ... will contain the file descriptor number or such in the future
     echo "got data: ".a:data
     " now that we have the date the process is no longer needed:
-    call async#Kill(self)
+    self.kill()
   endf
   call async#Start(ctx)
-  call async#Write(ctx, "date") # run date
+  call ctx.write("date") " run date
 
 What's nice about this design? You can add your own state to the context easily.
 Eg the LogToBuffer keeps state in a "pending" key which makes the code aware about
@@ -140,7 +141,7 @@ VIML CODE EXAMPLE: >
 
   " ctx 1
   let ctx = { 'cmd' : 'nr=1; while read f; do nr=`expr $nr + 1`; sleep 1; echo $nr $f - pong; if [ $nr == 5 ]; then break; fi; done; exit 12' }
-  fun ctx.receive(type, text)
+  fun ctx.receive(data, ...)
     call s:Add(string(a:text))
     call async_write(self, "ping\n")
   endf
