@@ -183,7 +183,9 @@ fun! async#Exec(ctx)
   " try finding supported implementation:
   let impl = get(ctx,'implementation', 'auto')
   if impl == 'auto'
-    if exists('*async_exec') && !has('gui_running')
+    " native is disabled because work branch is not up to date (argument order
+    " changed)
+    if 0 && exists('*async_exec') && !has('gui_running')
       let impl = 'native'
     elseif has('clientserver') && v:servername != '' && executable(s:async_helper_path)
       let impl = "c_executable"
@@ -208,6 +210,7 @@ fun! async#Exec(ctx)
     " So override the terminated callback:
     if has_key(ctx, 'terminated')
       let ctx.terminated_user = ctx.terminated
+      unlet ctx.terminated
     endif
     fun ctx.terminated()
       if has_key(self,'terminated_user')
