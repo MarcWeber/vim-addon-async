@@ -43,25 +43,21 @@ LogToBuffer which is porcelain on top of the API:
   Python 2.6.5 (r265:79063, May  9 2010, 14:26:02) 
   [GCC 4.4.3] on linux2
   Type "help", "copyright", "credits" or "license" for more information.
-   > print "hello world"
+  > print "hello world"
   hello world
-   > num1 =  40
-   > num2 = 42
-   > for i in range(num1, num2):
-   >    print i
-   > 
+  > num1 = 40 #1
+  > num2 = 42 #2
+  > for i in range(num1, num2):
+  >    print i
+  > 
   ... ... 40
   41
-  > typing here ...
+  > 
 
-Pay attention to the indentation level. The lines which have been executed
-are indented by one space so that they are not executed again because lines
-like "num1 = 40" don't return anything in python.
-The following lines have been sent in one go:
+  Pay attention: the async#GetLines script will sent #1 and #2 when
+  pressing <space><cr> in the num2 line. I recommend using <c-u><cr>
+  in order to enter a blank line if you want to prevent this
 
-   > for i in range(num1, num2):
-   >    print i
-   > 
 
 (the ... sent by the interpreter still has to be removed ! TODO)
 

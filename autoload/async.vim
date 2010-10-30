@@ -69,7 +69,6 @@ fun! async#GetLines(prefix)
   while getline(idx) =~ a:prefix
     let l = getline(idx)
     call add(lines, matchstr(l, a:prefix))
-    call setline(idx, ' '.l)
     let idx -= 1
   endw
   return join(reverse(lines),"\n")
