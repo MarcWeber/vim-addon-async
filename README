@@ -34,6 +34,8 @@ LogToBuffer which is porcelain on top of the API:
     oprint "abc"<space><cr>
   (everything started by "> " will be treated as text to be sent to python when
   <space><cr> is typed in insert mode
+  Alternatively you can visually select lines and press <cr> in visual mode to
+  send the text to the buffer as is (thus no leading > will be removed)
 
   See commentary of the LogToBuffer function has more sophisticated examples.
 

@@ -101,6 +101,8 @@ fun! async#LogToBuffer(ctx)
   exec 'inoremap <buffer> <cr> <cr>'.prefix
   exec 'noremap <buffer> <space><cr> :call<space>b:ctx.write(async#GetLines(''^'.prefix.'\zs.*\ze'')."\n")<cr>'
   exec 'inoremap <buffer> <space><cr> <esc>:call<space>b:ctx.write(async#GetLines(''^'.prefix.'\zs.*\ze'')."\n")<cr>'
+  vnoremap <buffer> <cr> y:call<space>b:ctx.write(getreg('"'))<cr>
+
   fun! ctx.started()
     call async#ExecInBuffer(self.bufnr, function('async#AppendBuffer'), "pid: " .self.pid, 1)
   endf
@@ -232,7 +234,7 @@ fun! async#Exec(ctx)
     call system(cmd. ' &> '. ctx['log-c_executable'].'&')
 
     fun ctx.kill()
-      exec 'pkill -9 '. self.pid
+      exec '!kill -9 '. self.pid
     endf
 
     fun ctx.write(input)
