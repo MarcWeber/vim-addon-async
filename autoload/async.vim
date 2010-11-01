@@ -188,7 +188,11 @@ fun! async#Exec(ctx)
     " changed)
     if 0 && exists('*async_exec') && !has('gui_running')
       let impl = 'native'
-    elseif has('clientserver') && v:servername != '' && executable(s:async_helper_path)
+    elseif has('clientserver') && v:servername != ''
+       if !executable(s:async_helper_path) && 'y' == input('compile c hepler application? [y] ','')
+         exec '! gcc -o'. s:async_helper_path.' '.s:async_helper_path.'.c'
+         if v:shell_error != 0 | throw "compiling helper app failed" | endif
+       endif
       let impl = "c_executable"
     else
       throw "no way to execute process. You must either have a patched Vim or  v:servername, != '' && has('clientserver') && executable(".s:async_helper_path.") "

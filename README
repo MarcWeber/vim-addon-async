@@ -77,6 +77,7 @@ For now I recommend using impl 2) (gvim) or impl 1) (non gui version of Vim)
 
   impl 1 native):
   ================
+      (out of order because API changed)
 
       compile my async version of Vim (github.com/MarcWeber/vim branch "work").
       (-) doesn't work in gui very well yet. That's why its not used in that case
@@ -89,6 +90,9 @@ For now I recommend using impl 2) (gvim) or impl 1) (non gui version of Vim)
       cd C; gcc -o vim-addon-async-helper vim-addon-async-helper.c
       (-) requires client server (X connection or the like
       (-) 20ms delay (vim -> app)
+
+    tested on linux and OSX. It should be easy to find a way to make the helper
+    app run on Windows as well.. Any volunteers ?
 
   impl 3 possible others):
   ================
