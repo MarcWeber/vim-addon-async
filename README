@@ -29,7 +29,7 @@ porcelain LogToBuffer running interactive interpreter shells within Vim buffers:
 How powerful this simple interface is is illustrated by
 LogToBuffer which is porcelain on top of the API:
 
-  call async#LogToBuffer({'cmd':'python -i', 'move_last':1, 'prompt': '^>>> $'})
+  call async_porcelaine#LogToBuffer({'cmd':'python -i', 'move_last':1, 'prompt': '^>>> $'})
   then type:
     oprint "abc"<space><cr>
   (everything started by "> " will be treated as text to be sent to python when
@@ -176,6 +176,10 @@ VIML CODE EXAMPLE: >
   endf
   call async_exec(ctx2)
 
+TIPS:
+==============================================================================
+this debugging worked best for me:
+call append('$', string)
 
 TODO:
 ===============================================================================

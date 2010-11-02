@@ -21,13 +21,20 @@ let s:impl = {'supported': 'no'}
 
 " tool {{{ 1
 
-fun! async#ExecAllArgs(...)
-  for e in a:000
-    exec e
-  endfor
+" same as call. If function is a string or a list of strings they'll be
+" executed instead
+fun! async#Call(...)
+  if type(a:1) == type('')
+    exec a:1
+  elseif type(a:1) == type([])
+    for e in a:1 | exec e | endfor
+  else
+    return call(function('call'), a:000)
+  endif
 endf
 
-fun! async#ExecInBuffer(bufnr, function, ...)
+" ... same as for function "call"
+fun! async#ExecInBuffer(bufnr, ...)
   let this_win = winnr()
   let other = bufwinnr(a:bufnr)
   if other == -1
@@ -36,7 +43,7 @@ fun! async#ExecInBuffer(bufnr, function, ...)
     let old_tab = tabpagenr()
     tabnew
     exec 'b '.a:bufnr
-    call call(a:function, a:000)
+    call call(function('async#Call'), a:000)
     q!
     if old_tab != tabpagenr()
       normal gT
@@ -44,7 +51,7 @@ fun! async#ExecInBuffer(bufnr, function, ...)
   else
     " buffer is visibale. So move cursor there:
     exec other.'wincmd w'
-    call call(a:function, a:000)
+    call call(function('async#Call'), a:000)
     exec this_win.'wincmd w'
   endif
 endf
@@ -72,88 +79,6 @@ fun! async#GetLines(prefix)
     let idx -= 1
   endw
   return join(reverse(lines),"\n")
-endf
-
-" run an interpreter (eg python, scala, ..), dropping the prompt.
-" This function also handles incomplete lines.
-" 
-" All lines starting with '> ' will be passed to the interpreter.
-" type o to start writing a line, type <space><cr> to sent it.
-"
-" examples:
-"   call async#LogToBuffer({'cmd':'python -i', 'move_last':1, 'prompt': '^>>> $'})
-"   call async#LogToBuffer({'cmd':'scala','move_last':1, 'prompt': 'scala> $'})
-"
-"   Example testing that appending to previous lines works correctly:
-"   call async#LogToBuffer({'cmd':'sh -c "es(){ echo -n \$1; sleep 1; }; while read f; do echo \$f; es a; es b; es c; echo; done"', 'move_last':1})
-"
-"   call async#LogToBuffer({'cmd':'/bin/sh', 'move_last':1, 'prompt': '^.*\$[$] '})
-"   then try running this:
-"   yes | { es(){ echo -n $1; sleep 1; }; while read f; do echo $f; es a; es b; es c; echo; done; }
-fun! async#LogToBuffer(ctx)
-  let ctx = a:ctx
-  sp | enew
-  let ctx.bufnr = bufnr('%')
-  let b:ctx = ctx
-  let prefix = '> '
-  exec 'noremap <buffer> o o'.prefix
-  exec 'noremap <buffer> O O'.prefix
-  exec 'inoremap <buffer> <cr> <cr>'.prefix
-  exec 'noremap <buffer> <space><cr> :call<space>b:ctx.write(async#GetLines(''^'.prefix.'\zs.*\ze'')."\n")<cr>'
-  exec 'inoremap <buffer> <space><cr> <esc>:call<space>b:ctx.write(async#GetLines(''^'.prefix.'\zs.*\ze'')."\n")<cr>'
-  vnoremap <buffer> <cr> y:call<space>b:ctx.write(getreg('"'))<cr>
-
-  fun! ctx.started()
-    call async#ExecInBuffer(self.bufnr, function('async#AppendBuffer'), "pid: " .self.pid, 1)
-  endf
-  fun! ctx.receive(...)
-    call async#DelayUntilNotDisturbing('process-pid'. self.pid, {'delay-when': ['buf-invisible:'. self.bufnr], 'fun' : self.delayed_work, 'args': a:000, 'self': self} )
-  endf
-  fun! ctx.delayed_work(text, ...)
-    " try
-      " debug output like this
-      " call append('0', 'rec: '.substitute(substitute(a:text,'\r', '\\r','g'), '\n', '\\n','g'))
-
-      " in rare cases it happens that a line is sent in two parts: eg "p" and "rint\n"
-      " write the "p" to the last line, but remember that there was no trailing
-      " \n by assigning it to pending.
-
-      let lines = split(a:text, '[\r\n]\+', 1)
-      if has_key(self, 'pending')
-        " drop pending line, it will be readded with rest of line
-        call async#ExecInBuffer(self.bufnr, function('async#ExecAllArgs'), "normal Gdd")
-        let lines[0] = self.pending .lines[0]
-      endif
-      if lines[-1] == '' || (has_key(self, 'prompt') &&  lines[-1] =~ self.prompt)
-        " trailing \n or prompt. drop it
-        silent! unlet self.pending
-        call remove(lines, -1)
-      else
-        " no trailing \n. Assume continuation will be sent in next block
-        let self.pending = lines[-1]
-        let lines[-1] = lines[-1].' ... waiting for \n'
-      endif
-
-      " let lines = map(lines, string('<: ').'.v:val')
-      let lines = filter(lines, 'v:val != ""')
-      if has_key(self,'regex_drop')
-        let lines = filter(lines, 'v:val !~'.string(self.regex_drop))
-      endif
-      " call append('$', lines)
-      "
-      " if has_key(self, 'move_last'))
-        " exec "normal G"
-      " endif
-      call async#ExecInBuffer(self.bufnr, function('async#AppendBuffer'), lines, has_key(self, 'move_last'))
-    " catch /.*/
-    "  call append('$',v:exception)
-    " endtry
-  endf
-  fun! ctx.terminated()
-    call async#ExecInBuffer(self.bufnr, function('async#AppendBuffer'), ["exit code: ". self.status], has_key(self, 'move_last'))
-  endf
-  call async#Exec(ctx)
-  return ctx
 endf
 
 " }}}
@@ -234,8 +159,14 @@ fun! async#Exec(ctx)
     " start background process
     let cmd = s:async_helper_path.' vim '.join(map([v:servername, ctx.vim_process_id, ctx.tmp_from_vim, ctx.cmd], 'shellescape(v:val)'),' ')
     let ctx['log-c_executable'] = tempname()
-    " let g:cmd = cmd
-    call system(cmd. ' &> '. ctx['log-c_executable'].'&')
+
+    if 0 || get(ctx,'debug_process', 0)
+      " why don't I see the debugging output in the buffer?
+      " call async_porcelaine#LogToBuffer({'cmd':cmd, 'move_last':1, 'prompt': '^.*\$[$] '})
+      call append('$', ['copy paste this into a shell', cmd])
+    else
+      call system(cmd. ' > '. ctx['log-c_executable'].'& 2&>1')
+    endif
 
     fun ctx.kill()
       exec '!kill -9 '. self.pid
@@ -265,8 +196,7 @@ fun! async#Exec(ctx)
 endf
 
 " helper function c_executable
-fun! async#Receive(processId, data)
-  echoe "received"
+fun! async#ReceiveNoTry(processId, data)
   if !has_key(s:async.processes, a:processId)
     echoe "async#Receive called with unkown vim process identifier"
     return
@@ -285,6 +215,14 @@ fun! async#Receive(processId, data)
     unlet s:async.processes[a:processId]
   endif
   redraw
+endf
+
+fun! async#Receive(processId, data)
+  try
+    call async#ReceiveNoTry(a:processId, a:data)
+  catch /.*/
+    call append('$', v:exception)
+  endtry
 endf
 
 " }}}
