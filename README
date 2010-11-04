@@ -131,6 +131,8 @@ This would be another perfect match to provide a different implementation.
 
 IMHO their only issue is that they block Vim if have long running tasks.
 
+  Screen (vim + gnu screen/tmux) : Simulate a split shell, using gnu screen or tmux:
+  http://www.vim.org/scripts/script.php?script_id=2711
 
 yet two another examples:
 ==============================================================================
