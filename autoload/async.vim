@@ -95,7 +95,7 @@ endf
 " ctx must have key "cmd"
 " the following functions will be added:
 "
-" ctx.kill() # kill the process
+" ctx.kill([signal]) # kill the process. signal defaults to -9 which terminates the process
 " ctx.signal('interrupt')
 " ctx.write(data [, fd ] ) fd not implemented yet
 "
@@ -168,8 +168,9 @@ fun! async#Exec(ctx)
       call system(cmd. ' > '. ctx['log-c_executable'].'& 2&>1')
     endif
 
-    fun ctx.kill()
-      exec '!kill -9 '. self.pid
+    fun ctx.kill(...)
+      let signal = a:0 > 0 ? a:1 : '9'
+      exec '!kill -'.signal.' '. self.pid
     endf
 
     fun ctx.write(input)

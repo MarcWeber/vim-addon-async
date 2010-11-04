@@ -11,6 +11,9 @@
 #define TOWAIT 20
 #define BUF_SIZE 4048
 
+#define SHELL_NAME "sh"
+#define SHELL "/bin/sh"
+
 /* author: Marc Weber
  * license: same as Vim .c code
  *
@@ -194,12 +197,13 @@ int main(int argc, char * argv[])
 	ignored = dup(fd_fromshell[1]);
 	close(fd_fromshell[1]);
 
-        if (0 != system(cmd)){
-          printf("starting cmd %s failed\n", cmd);
-          exit(1);
-        } else {
-          exit(0);
-        }
+        char * argv[3];
+        argv[0] = SHELL_NAME;
+        argv[1] = "-c";
+        argv[2] = cmd;
+        argv[3] = 0;
+
+        execv(SHELL, argv);
     }
 
     /* parent */

@@ -13,7 +13,7 @@
 "   Example testing that appending to previous lines works correctly:
 "   call async_porcelaine#LogToBuffer({'cmd':'sh -c "es(){ echo -n \$1; sleep 1; }; while read f; do echo \$f; es a; es b; es c; echo; done"', 'move_last':1})
 "
-"   call async_porcelaine#LogToBuffer({'cmd':'/bin/sh', 'move_last':1, 'prompt': '^.*\$[$] '})
+"   call async_porcelaine#LogToBuffer({'cmd':'/bin/sh -i', 'move_last':1, 'prompt': '^.*\$[$] '})
 "   then try running this:
 "   yes | { es(){ echo -n $1; sleep 1; }; while read f; do echo $f; es a; es b; es c; echo; done; }
 fun! async_porcelaine#LogToBuffer(ctx)
@@ -27,12 +27,17 @@ fun! async_porcelaine#LogToBuffer(ctx)
   " normal way. It must process the data it can handle and return 0 if it
   " wants more or the rest if its done and got too many characters
   let ctx.interceptors = []
+  noremap <buffer> <c-c> :call b:ctx.kill('SIGINT')<cr>
   exec 'noremap <buffer> o o'.prefix
   exec 'noremap <buffer> O O'.prefix
   exec 'inoremap <buffer> <cr> <cr>'.prefix
   exec 'noremap <buffer> <space><cr> :call<space>b:ctx.write(async#GetLines('.string(ctx.cmd_line_regex).')."\n")<cr>'
   exec 'inoremap <buffer> <space><cr> <esc>:call<space>b:ctx.write(async#GetLines('.string(ctx.cmd_line_regex).')."\n")<cr>'
   vnoremap <buffer> <cr> y:call<space>b:ctx.write(getreg('"'))<cr>
+
+  augroup VIM_ADDON_ASYNC_AUTO_KILL
+    autocmd BufWipeout <buffer> debug call b:ctx.kill()
+  augroup end
 
   fun! ctx.started()
     call async#ExecInBuffer(self.bufnr, function('async#AppendBuffer'), ["pid: " .self.pid, 1])
@@ -294,4 +299,5 @@ fun! async_porcelaine#ScalaOmniComplete(findstart, base)
 
 endf
 " }}}
-abc
+
+" vim:fdm=marker
