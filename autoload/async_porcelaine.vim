@@ -1,4 +1,18 @@
-
+" only call receive after full line has been received
+" one line will be passed each time
+" usage see autoload/vim_addon_async_tests.vim
+fun! async_porcelaine#LineBuffering(ctx)
+  let ctx = a:ctx
+  let ctx.original_receive = ctx.receive
+  unlet ctx.receive
+  fun ctx.receive(data,...)
+    let lines = split(get(self,'buffer','') . a:data, "\n", 1)
+    for l in lines[0:-2]
+      call call(self.original_receive, [l], self)
+    endfor
+    let self.buffer = lines[-1]
+  endf
+endf
 
 " run an interpreter (eg python, scala, ..), dropping the prompt.
 " This function also handles incomplete lines.
