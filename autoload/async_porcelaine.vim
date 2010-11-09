@@ -60,8 +60,9 @@ fun! async_porcelaine#LogToBuffer(ctx)
 
   " interception implementation (get data until a regex matches) {{{2
   let ctx.interceptImpl = function('async_porcelaine#InterceptIpml')
-  fun! ctx.dataTillRegexMatchesLine(regex, callback)
-    call add(self.interceptors, funcref#Function(self.interceptImpl, {'args': [a:regex, a:callback], 'self': self}))
+  fun! ctx.dataTillRegexMatchesLine(regex, callback, ...)
+    let self_ = a:0 > 0 ? a:1 : self
+    call add(self.interceptors, funcref#Function(self.interceptImpl, {'args': [a:regex, a:callback], 'self': self_}))
   endf
   " }}}2
 
@@ -142,7 +143,9 @@ endf
 
 fun! async_porcelaine#InterceptIpml(regex, callback, data, ...) dict
   let self.received_data = get(self,'received_data','').a:data
-  let first = matchstr( self.received_data, a:regex )
+  let m = matchlist( self.received_data, a:regex )
+  let first = empty(m) ? '' : m[0]
+
   let f = first
   if first == ""
     return 0
@@ -190,9 +193,9 @@ endf
 let s:wait  = "please wait"
 
 " called with b:ctx context
-fun! async_porcelaine#HandleScalaCompletionData(lines) dict
+fun! async_porcelaine#HandleScalaCompletionData(data) dict
 
-  " call append('$', string([self.completion_state, a:lines]))
+  " call append('$', string([self.completion_state, a:data]))
 
   if self.completion_state == -1
     let self.completion_state += 1
@@ -201,7 +204,7 @@ fun! async_porcelaine#HandleScalaCompletionData(lines) dict
 
     let self.completions = []
     " first line is repeated cmd line - drop it
-    let self.completion_names = split(a:lines,"\n")
+    let self.completion_names = split(a:data,"\n")
 
     " throw away lines which seem to be bad:
     call s:DropBad(self.completion_names)
@@ -236,7 +239,7 @@ fun! async_porcelaine#HandleScalaCompletionData(lines) dict
   else
     " [1]
 
-    let x = split(a:lines,"\n")
+    let x = split(a:data,"\n")
     call s:DropBad(x)
     let t = join(x,"\n")
     " call append('$', 't: '.t.' erwartet :')
@@ -287,7 +290,7 @@ fun! async_porcelaine#ScalaOmniComplete(findstart, base)
       " helper function registereing HandleScalaCompletionData callback which
       " receives data until next scala> prompt is seen
       fun! b:ctx.intercept()
-        call self.dataTillRegexMatchesLine('\zs.\{-}\nNEXT_NEXT_NEXT\n\ze', funcref#Function(function('async_porcelaine#HandleScalaCompletionData'), {'self': b:ctx } ))
+        call self.dataTillRegexMatchesLine('.\{-}\nNEXT_NEXT_NEXT\n', funcref#Function(function('async_porcelaine#HandleScalaCompletionData'), {'self': b:ctx } ))
       endf
 
       call b:ctx.intercept()

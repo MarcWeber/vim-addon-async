@@ -101,6 +101,9 @@ endf
 "
 " Some keys will be added depending on the implementation
 fun! async#Exec(ctx)
+  if has_key(a:ctx,'kill')
+    throw "can't exec ctx twice (yet)"
+  endif
   let ctx = a:ctx
   let ctx.vim_process_id = s:vim_process_id
   let s:vim_process_id += 1
@@ -121,6 +124,7 @@ fun! async#Exec(ctx)
       let impl = "c_executable"
     else
       throw "no way to execute process. You must either have a patched Vim or  v:servername, != '' && has('clientserver') && executable(".s:async_helper_path.") "
+    endif
   endif
 
   let ctx.implementation = impl
