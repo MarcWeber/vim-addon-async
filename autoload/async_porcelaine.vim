@@ -50,11 +50,11 @@ fun! async_porcelaine#LogToBuffer(ctx)
   vnoremap <buffer> <cr> y:call<space>b:ctx.write(getreg('"'))<cr>
 
   augroup VIM_ADDON_ASYNC_AUTO_KILL
-    autocmd BufWipeout <buffer> debug call b:ctx.kill()
+    autocmd BufWipeout <buffer> call b:ctx.kill()
   augroup end
 
   fun! ctx.started()
-    call async#ExecInBuffer(self.bufnr, function('async#AppendBuffer'), ["pid: " .self.pid, 1])
+    call async#ExecInBuffer(self.bufnr, function('async#AppendBuffer'), ["pid: " .self.pid. ", bufnr: ". self.bufnr, 1])
   endf
   let ctx.receive = function('async_porcelaine#Receive')
 
@@ -102,6 +102,9 @@ fun! async_porcelaine#LogToBuffer(ctx)
       " if has_key(self, 'move_last'))
         " exec "normal G"
       " endif
+      if has_key(self, 'line_prefix')
+        call map(lines, string(self.line_prefix).'.v:val')
+      endif
       call async#ExecInBuffer(self.bufnr, function('async#AppendBuffer'), [lines, has_key(self, 'move_last')])
     " catch /.*/
     "  call append('$',v:exception)
