@@ -178,7 +178,13 @@ fun! async#Exec(ctx)
     endf
 
     fun ctx.write(input)
-      if  (-1 == writefile(split(a:input,"\n",1), self.tmp_from_vim2, 'b'))
+      " force list
+      let input = type(a:input) == type("") ? [a:input] : a:input
+
+      " quote \ which will be unquoted by c_executable. list items will be
+      " quoted joined by '\0' byte
+      let quoted = join(map(input, 'escape(v:val,''\'')'),'\0')
+      if  (-1 == writefile(split(quoted,"\n",1), self.tmp_from_vim2, 'b'))
         echoe "writing vim to  tool file failed!"
       endif
       " mv so that its an atomic operation (make sure the process does't read a
@@ -201,30 +207,28 @@ fun! async#Exec(ctx)
 endf
 
 " helper function c_executable
-fun! async#ReceiveNoTry(processId, data)
+fun! async#ReceiveNoTry(processId, message, data)
   if !has_key(s:async.processes, a:processId)
     echoe "async#Receive called with unkown vim process identifier"
     return
   endif
   let ctx = s:async.processes[a:processId]
-  let message = a:data[:0]
-  let data = a:data[1:]
-  if message == "p"
-    let ctx.pid = 1 * data
+  if a:message == "pid"
+    let ctx.pid = 1 * a:data[0]
     call ctx.started()
-  elseif message == "d"
-    call ctx.receive(data, 1)
-  elseif message == "k"
-    let ctx.status = 1 * data
+  elseif a:message == "data"
+    call ctx.receive(get(ctx,'zero_aware',0) ? a:data : join(a:data,"ZERO_BYTE"), 1)
+  elseif a:message == "died"
+    let ctx.status = 1 * a:data[0]
     call ctx.terminated()
     unlet s:async.processes[a:processId]
   endif
   redraw
 endf
 
-fun! async#Receive(processId, data)
+fun! async#Receive(processId, message, data)
   try
-    call async#ReceiveNoTry(a:processId, a:data)
+    call async#ReceiveNoTry(a:processId, a:message, a:data)
   catch /.*/
     call append('$', v:exception)
   endtry

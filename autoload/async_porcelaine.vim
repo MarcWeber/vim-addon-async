@@ -293,7 +293,7 @@ fun! async_porcelaine#ScalaOmniComplete(findstart, base)
       " helper function registereing HandleScalaCompletionData callback which
       " receives data until next scala> prompt is seen
       fun! b:ctx.intercept()
-        call self.dataTillRegexMatchesLine('.\{-}\nNEXT_NEXT_NEXT\n', funcref#Function(function('async_porcelaine#HandleScalaCompletionData'), {'self': b:ctx } ))
+        call self.dataTillRegexMatchesLine('.\{-}\nNEXT_NEXT_NEXT\n\n', funcref#Function(function('async_porcelaine#HandleScalaCompletionData'), {'self': b:ctx } ))
       endf
 
       call b:ctx.intercept()

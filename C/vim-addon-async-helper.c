@@ -33,6 +33,11 @@ void usage(char * name){
   printf("%s vim-executable vim-server-name process_id from-vim-file cmd\n", name);
 }
 
+void my_die(char * msg){
+  printf(msg);
+  exit(1);
+}
+
 static void
 simulate_dumb_terminal()
 {
@@ -66,11 +71,18 @@ simulate_dumb_terminal()
 # endif
 }
 
-// target should be strlen(from) * 2 + 2
-void vimQuote(char * ptr, char * target){
+// target size should be
+// strlen(type) + 3 + strlen(from) * 3 + 5
+// Because Vim can't cope with '\0' bytes vimQuote
+// encodes a Vim list. If a \0' byte is found a new list item is started
+void vimQuote(char * ptr, int size, char * target){
 
-  *target++ = '\"';
-  while (*ptr){
+  char * target_start;
+
+  *target++ = '[';
+  *target++ = '"';
+  // encode remaining data as additional list items
+  while (size-- > 0){
     switch (*ptr){
       case '\\' :  
         *target++ = '\\';
@@ -88,21 +100,37 @@ void vimQuote(char * ptr, char * target){
         *target++ = '\\';
         *target++ = '"';
         break;
+      case '\0' :  
+        // quote \0 by starting a new list item
+        *target++ = '"';
+        *target++ = ',';
+        *target++ = '"';
+        break;
       default :
         *target++ = *ptr;
     }
+
+    // Vim can't handle 0 bytes. So replace them by \n
+    if (*target == 0)
+      *target = '\n';
+
     ptr++;
   }
-  *target++ = '\"';
-  *target++ = 0;
+  *target++ = '"';
+  *target++ = ']';
+  *target++ = '\0';
 }
 
-void send(char * vimExecutable, char *vimServerName, char * processId, char * buf, int read_bytes){
-  char command[2*BUF_SIZE+1];
-  char quoted[2*BUF_SIZE+3];
+void send(char * vimExecutable, char *vimServerName, char * processId, char * type, char * buf, int read_bytes){
+  char command[50 + BUF_SIZE+3];
+  if (strlen(type) > 4){
+    my_die("type must not be longer than 4 chars\n");
+  }
 
-  vimQuote(buf, quoted);
-  snprintf(command, sizeof(command), "async#Receive(\"%s\", %s)", processId, quoted);
+  char quoted[7+3*BUF_SIZE+5];
+
+  vimQuote(buf, read_bytes, quoted);
+  snprintf(command, sizeof(command), "async#Receive(\"%s\",\"%s\",%s)", processId, type, quoted);
 
   char * argv3[6];
   argv3[0] = vimExecutable;
@@ -135,6 +163,23 @@ void send(char * vimExecutable, char *vimServerName, char * processId, char * bu
     if (WIFEXITED(status))
       break;
   }
+}
+
+void unquote(char * ptr, int buf_count, char * target, int * written){
+   *written = 0;
+
+   while (buf_count-- > 0){
+      switch (*ptr){
+        case '\\' :  
+          buf_count--;
+          *target++ = *ptr++;
+          if (*target == '0') *target = '\0';
+          break;
+        default :
+          *target++ = *ptr++;
+      }
+      (*written)++;
+   }
 }
 
 int main(int argc, char * argv[])
@@ -217,8 +262,8 @@ int main(int argc, char * argv[])
 
     // notify Vim about pid:
     char s_pid[10];
-    snprintf(&s_pid[0], sizeof(s_pid), "p%d", pid);
-    send(vimExecutable, vimServerName, processId, s_pid, strlen(s_pid));
+    snprintf(&s_pid[0], sizeof(s_pid), "%d", pid);
+    send(vimExecutable, vimServerName, processId, "pid", s_pid, strlen(s_pid));
 
     // process watching for vim -> process input:
 
@@ -234,6 +279,7 @@ int main(int argc, char * argv[])
          FILE * f_input = fopen(inputFile, "r");
          int read_bytes;
          char buf[BUF_SIZE];
+         char to_sent[2*BUF_SIZE];
 
          // check for input .. probably I should be creating a fifo ..
          if (f_input != NULL) {
@@ -241,8 +287,13 @@ int main(int argc, char * argv[])
            read_bytes = fread(&buf, 1, BUF_SIZE-1, f_input);
            buf[read_bytes] = 0;
            printf("got bytes: %d \n%s\n", read_bytes, &buf[0]);
-           size_t written = write(fd_to, &buf[0], read_bytes);
-           if (written != read_bytes) printf("failed writing all bytes\n");
+
+           char buf_to_sent[2*BUF_SIZE];
+           int to_sent;
+           unquote(buf, read_bytes, &buf_to_sent[0], &to_sent);
+           size_t written = write(fd_to, &buf_to_sent[0], to_sent);
+           if (written != to_sent) printf("failed writing all bytes\n");
+           printf("%d bytes written to stdin of process\n", to_sent);
            fclose(f_input);
            unlink(inputFile);
          }
@@ -282,11 +333,9 @@ int main(int argc, char * argv[])
          ret--;
          // read_bytes and send buf to Vim
 
-         buf[0] = 'd';
-         read_bytes = read(fd_from, &buf[1], BUF_SIZE-1);
-         buf[read_bytes+1] = 0;
-         // printf("sending bytes: %s\n", &buf[1]);
-         send(vimExecutable, vimServerName, processId, buf, read_bytes + 1);
+         read_bytes = read(fd_from, &buf[0], BUF_SIZE-1);
+         printf("sending bytes: %s, len %d\n", &buf[0], read_bytes);
+         send(vimExecutable, vimServerName, processId, "data", buf, read_bytes);
          // wait until Vim has read the data
          if (read_bytes == 0)
            goto terminate;
@@ -309,8 +358,8 @@ terminate:
     }
 
     char code[8];
-    snprintf(&code[0], sizeof(code), "k%d", status);
-    send(vimExecutable, vimServerName, processId, code, strlen(code));
+    snprintf(&code[0], sizeof(code), "%d", status);
+    send(vimExecutable, vimServerName, processId, "died", code, strlen(code));
 
 error_fork:
      close(fd_toshell[0]);
