@@ -171,9 +171,11 @@ void unquote(char * ptr, int buf_count, char * target, int * written){
    while (buf_count-- > 0){
       switch (*ptr){
         case '\\' :  
+          ptr++;
           buf_count--;
-          *target++ = *ptr++;
+          *target = *ptr++;
           if (*target == '0') *target = '\0';
+          *target++;
           break;
         default :
           *target++ = *ptr++;
