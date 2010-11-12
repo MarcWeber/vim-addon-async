@@ -23,12 +23,34 @@ fun! vim_addon_async_tests#Binary()
 
     let ok = self.data == self.pending
     if ok
-      debug call feedkeys(":echoe 'success'\<cr>")
+      call feedkeys(":echoe 'success'\<cr>")
+      call self.kill()
     endif
-    call self.kill()
   endf
 
   call async#Exec(ctx)
   call ctx.write(ctx.data)
+
+endf
+
+fun! vim_addon_async_tests#Chunksize(max)
+
+  let ctx =  {'cmd':'seq '.a:max}
+  let ctx.max = a:max
+  let ctx.pending = ''
+
+  fun ctx.receive(data, ...)
+    let self.pending .= a:data
+
+    let ok = split(self.pending,'[ \n]') == map(range(1,self.max),'v:val.""')
+    if ok
+      call feedkeys(":echoe 'success'\<cr>")
+      call self.kill()
+    endif
+  endf
+
+  call async#Exec(ctx)
+
+  return ctx
 
 endf

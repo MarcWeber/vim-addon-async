@@ -188,6 +188,7 @@ TROUBLE?
 try running this test which checks whether all characters (0 - 255) are quoted
 correctly:
     call vim_addon_async_tests#Binary()
+    call vim_addon_async_tests#Chunksize()
 
 TODO:
 ===============================================================================
@@ -213,5 +214,6 @@ TODO:
                                     cursor didn't move and the completion
                                     results are received by the specified
                                     receive function
+
 
 

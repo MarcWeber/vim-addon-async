@@ -66,8 +66,10 @@ fun! async_porcelaine#LogToBuffer(ctx)
   endf
   " }}}2
 
+  let g:aaa= []
   " default implementation: Add data to the buffer {{{2
   fun! ctx.delayed_work(text, ...)
+    call add(g:aaa, a:text)
     " try
       " debug output like this
       " call append('0', 'rec: '.substitute(substitute(a:text,'\r', '\\r','g'), '\n', '\\n','g'))
@@ -198,6 +200,7 @@ let s:wait  = "please wait"
 fun! async_porcelaine#HandleScalaCompletionData(data) dict
 
   " call append('$', string([self.completion_state, a:data]))
+  call add(g:aaa, a:data)
 
   if self.completion_state == -1
     let self.completion_state += 1
