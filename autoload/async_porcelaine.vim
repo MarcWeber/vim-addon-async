@@ -123,7 +123,7 @@ fun! async_porcelaine#LogToBuffer(ctx)
 endf
 
 fun! async_porcelaine#Receive(...) dict
-  let args = a:000
+  let args = copy(a:000)
   while len(self.interceptors) > 0 && len(args[0] > 0)
     " call append('$', 'intercept mit '.string(args))
     let r = funcref#Call(self.interceptors[0], args, self)
@@ -149,7 +149,6 @@ fun! async_porcelaine#InterceptIpml(regex, callback, data, ...) dict
   let m = matchlist( self.received_data, a:regex )
   let first = empty(m) ? '' : m[0]
 
-  let f = first
   if first == ""
     return 0
   else
@@ -207,7 +206,7 @@ fun! async_porcelaine#HandleScalaCompletionData(data) dict
 
     let self.completions = []
     " first line is repeated cmd line - drop it
-    let self.completion_names = split(a:data,"\n")
+    let self.completion_names = split(a:data,"\n")[1:]
 
     " throw away lines which seem to be bad:
     call s:DropBad(self.completion_names)
@@ -254,8 +253,8 @@ fun! async_porcelaine#HandleScalaCompletionData(data) dict
       " got all, restart completion
       call feedkeys(repeat("\<bs>",len(s:wait))."\<c-x>\<c-o>")
     else
-      call append('$', self.completion_state)
-      redraw
+      " call append('$', self.completion_state)
+      " redraw
     endif
 
     let self.completion_state +=1

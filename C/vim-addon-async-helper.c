@@ -286,7 +286,8 @@ int main(int argc, char * argv[])
          // check for input .. probably I should be creating a fifo ..
          if (f_input != NULL) {
            printf("got file from vim \n");
-           read_bytes = fread(&buf, 1, BUF_SIZE-1, f_input);
+           //  /2 because BUF_SIZE will result in too long command lines when sending bytes back to Vim
+           read_bytes = fread(&buf, 1, BUF_SIZE-1 / 2, f_input);
            buf[read_bytes] = 0;
            printf("got bytes: %d \n%s\n", read_bytes, &buf[0]);
 
