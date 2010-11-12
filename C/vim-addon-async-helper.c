@@ -85,6 +85,9 @@ void vimQuote(char * ptr, int size, char * target){
   while (size-- > 0){
     switch (*ptr){
       case '\\' :  
+        // why do I have to quote \ twice?
+        *target++ = '\\';
+        *target++ = '\\';
         *target++ = '\\';
         *target++ = '\\';
         break;
@@ -286,8 +289,7 @@ int main(int argc, char * argv[])
          // check for input .. probably I should be creating a fifo ..
          if (f_input != NULL) {
            printf("got file from vim \n");
-           //  /2 because BUF_SIZE will result in too long command lines when sending bytes back to Vim
-           read_bytes = fread(&buf, 1, BUF_SIZE-1 / 2, f_input);
+           read_bytes = fread(&buf, 1, BUF_SIZE-1, f_input);
            buf[read_bytes] = 0;
            printf("got bytes: %d \n%s\n", read_bytes, &buf[0]);
 

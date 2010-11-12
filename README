@@ -183,6 +183,12 @@ TIPS:
 this debugging worked best for me:
 call append('$', string)
 
+TROUBLE?
+==============================================================================
+try running this test which checks whether all characters (0 - 255) are quoted
+correctly:
+    call vim_addon_async_tests#Binary()
+
 TODO:
 ===============================================================================
 
