@@ -193,7 +193,7 @@ fun! async#Exec(ctx)
       " wait until the proces removed the file
       let start_waiting = localtime()
       while (filereadable(self.tmp_from_vim))
-        if localtime() - start_waiting > 10
+        if localtime() - start_waiting > 3
           echoe "external helper process didn't read the input file !"
           " vim will clean up tmp file on shutdown
           return
@@ -291,14 +291,18 @@ fun! async#RunDelayedActions()
       if run
         " run action
         let idx = idx + 1
-        if has_key(action,'exec')
-          exec action.exec
-        else
-          let args = [action.fun]
-          call add(args, get(action,'args',[]))
-          if has_key(action, 'self') | call add(args, action.self) | endif
-          call call(function('call'), args)
-        endif
+        try
+          if has_key(action,'exec')
+            exec action.exec
+          else
+            let args = [action.fun]
+            call add(args, get(action,'args',[]))
+            if has_key(action, 'self') | call add(args, action.self) | endif
+            call call(function('call'), args)
+          endif
+        catch /.*/
+          echoe "exception while running delayed action :".v:exception
+        endtry
       else
         break
       endif
