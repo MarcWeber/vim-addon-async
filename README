@@ -1,3 +1,8 @@
+list of plugins using vim-addon-async:
+===============================================================================
+- ensime (Scala server providing fast type checking and completion)
+- vim-addon-xdebug (xdebug implementation for Vim)
+
 GOAL (provide API for Vim users)
 ==============================================================================
 provide an async communication interface for VimL which can be implemented in different ways.
@@ -189,6 +194,20 @@ try running this test which checks whether all characters (0 - 255) are quoted
 correctly:
     call vim_addon_async_tests#Binary()
     call vim_addon_async_tests#Chunksize()
+
+Using the client-server I faced several issues:
+
+  - if there is a VimL error you don't see it (try using debug or run the code
+    manually within Vim)
+
+  - some commands seem to behave strange.
+    Eg in vim-addon-xdebug I had to switch off syntax else Vim crashes. Also
+    "normal jdd" seem to never return in one case
+
+Summary: Everything seems to work fine if you're willing to spend some time on
+finding workarounds on some commands. If you have issues contact me and I'll
+try to help.
+
 
 TODO:
 ===============================================================================
