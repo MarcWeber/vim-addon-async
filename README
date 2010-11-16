@@ -3,6 +3,11 @@ list of plugins using vim-addon-async:
 - ensime (Scala server providing fast type checking and completion)
 - vim-addon-xdebug (xdebug implementation for Vim)
 
+two REPL (read print eval loop) implementations are available for
+  - Scala
+  - Ruby
+providing completion on objects etc.
+
 GOAL (provide API for Vim users)
 ==============================================================================
 provide an async communication interface for VimL which can be implemented in different ways.
