@@ -3,8 +3,10 @@
 
 " usage:
 " call repl_ruby#RubyBuffer({'cmd':'irb','move_last' : 1})
-" provides ruby completion. Be careful. If you do foo.remove().<c-x><c-o>
+" provides ruby completion. Be careful. If you do foo.remove().<c-x><c-o> 
 " foo.remove() will be evaluated (multiple times!)
+"
+" You can also run /bin/sh and use require 'debug' in your ruby scripts
 fun! repl_ruby#RubyBuffer(...)
   let ctx = a:0 > 0 ? a:1 : {}
   call async_porcelaine#LogToBuffer(ctx)
