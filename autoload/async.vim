@@ -233,7 +233,7 @@ fun! async#Receive(processId, message, ...)
     let data = a:1
   else
     let ctx = s:async.processes[a:processId]
-    debug let content = readfile(ctx.tmp_to_vim,'b')[0]
+    let content = readfile(ctx.tmp_to_vim,'b')[0]
     let data = eval(content)
     call delete(ctx.tmp_to_vim)
   else
