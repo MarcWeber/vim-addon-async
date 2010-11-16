@@ -9,7 +9,8 @@
 
  // wait 50ms before polling again
 #define TOWAIT 20
-#define BUF_SIZE 4048
+// #define BUF_SIZE 4048
+#define BUF_SIZE 259072
 
 #define SHELL_NAME "sh"
 #define SHELL "/bin/sh"
@@ -30,7 +31,7 @@
  */ 
 
 void usage(char * name){
-  printf("%s vim-executable vim-server-name process_id from-vim-file cmd\n", name);
+  printf("%s vim-executable vim-server-name process_id from-vim-file to-vim-file cmd_max_chars cmd\n", name);
 }
 
 void my_die(char * msg){
@@ -124,7 +125,9 @@ void vimQuote(char * ptr, int size, char * target){
   *target++ = '\0';
 }
 
-void send(char * vimExecutable, char *vimServerName, char * processId, char * type, char * buf, int read_bytes){
+static int cmd_max_chars = 0; // set in main
+
+void send(char * vimExecutable, char *vimServerName, char * processId, char * type, char * buf, int read_bytes, char * toVim){
   char command[50 + BUF_SIZE+3];
   if (strlen(type) > 4){
     my_die("type must not be longer than 4 chars\n");
@@ -133,7 +136,22 @@ void send(char * vimExecutable, char *vimServerName, char * processId, char * ty
   char quoted[7+3*BUF_SIZE+5];
 
   vimQuote(buf, read_bytes, quoted);
-  snprintf(command, sizeof(command), "async#Receive(\"%s\",\"%s\",%s)", processId, type, quoted);
+  int len = strlen(quoted);
+  int use_file = len > cmd_max_chars;
+  if (use_file){
+    FILE * f = fopen(toVim, "w");
+    if (!f) my_die("could'nt create output file for sending data to Vim!");
+    int written = fwrite(&quoted[0], 1, len, f);
+    if (written != len){
+      printf("%d %d\n", written, len);
+      my_die("couldn't write all bytes to file");
+    }
+    fclose(f);
+    snprintf(command, sizeof(command), "async#Receive(\"%s\",\"%s\")", processId, type);
+  } else {
+    snprintf(command, sizeof(command), "async#Receive(\"%s\",\"%s\",%s)", processId, type, quoted);
+  }
+   
 
   char * argv3[6];
   argv3[0] = vimExecutable;
@@ -166,6 +184,22 @@ void send(char * vimExecutable, char *vimServerName, char * processId, char * ty
     if (WIFEXITED(status))
       break;
   }
+
+  if (use_file){
+    printf("waiting for vim reading data file\n");
+    // wait until Vim has deleted the file
+     struct timeval  tv;
+     tv.tv_sec = TOWAIT / 1000;
+     tv.tv_usec = (TOWAIT % 1000) * (1000000/1000);
+
+     while (1){
+       int ret = select(0, NULL, NULL, NULL, &tv);
+       FILE * f = fopen(toVim, "r");
+       if (!f) break;
+       fclose(f);
+     }
+    printf("finished waiting\n");
+  }
 }
 
 void unquote(char * ptr, int buf_count, char * target, int * written){
@@ -191,7 +225,7 @@ int main(int argc, char * argv[])
 {
 
   int i;
-  if (argc < 6) {
+  if (argc < 8) {
     usage(argv[0]);
   } else {
     argv++; argc--;
@@ -199,7 +233,9 @@ int main(int argc, char * argv[])
     char * vimServerName = argv[1];
     char * processId     = argv[2];
     char * inputFile     = argv[3]; // from Vim to this tool
-    char * cmd           = argv[4];
+    char * toVim         = argv[4]; // if more than cmd_max_chars were received use a file to pass data to Vim for performance reasons
+    cmd_max_chars    = atoi(argv[5]);
+    char * cmd           = argv[6];
     int    pipe_error = 0;
 
 
@@ -268,7 +304,7 @@ int main(int argc, char * argv[])
     // notify Vim about pid:
     char s_pid[10];
     snprintf(&s_pid[0], sizeof(s_pid), "%d", pid);
-    send(vimExecutable, vimServerName, processId, "pid", s_pid, strlen(s_pid));
+    send(vimExecutable, vimServerName, processId, "pid", s_pid, strlen(s_pid), toVim);
 
     // process watching for vim -> process input:
 
@@ -338,10 +374,9 @@ int main(int argc, char * argv[])
          ret--;
          // read_bytes and send buf to Vim
 
-         //  /2 because BUF_SIZE will result in too long command lines when sending bytes back to Vim
-         read_bytes = read(fd_from, &buf[0], (BUF_SIZE-1) / 2);
+         read_bytes = read(fd_from, &buf[0], BUF_SIZE-1);
          printf("sending bytes: %s, len %d\n", &buf[0], read_bytes);
-         send(vimExecutable, vimServerName, processId, "data", buf, read_bytes);
+         send(vimExecutable, vimServerName, processId, "data", buf, read_bytes, toVim);
          // wait until Vim has read the data
          if (read_bytes == 0)
            goto terminate;
@@ -357,6 +392,7 @@ int main(int argc, char * argv[])
     int rc;
 terminate:
 
+   printf("waiting for termination\n");
     if ( waitpid(pid, &status, WNOHANG) == 0 ) {
         // comments see vim code
         kill(pid, SIGTERM);
@@ -365,7 +401,7 @@ terminate:
 
     char code[8];
     snprintf(&code[0], sizeof(code), "%d", status);
-    send(vimExecutable, vimServerName, processId, "died", code, strlen(code));
+    send(vimExecutable, vimServerName, processId, "died", code, strlen(code), toVim);
 
 error_fork:
      close(fd_toshell[0]);

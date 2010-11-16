@@ -6,6 +6,7 @@
 
 " defined in plugin file
 let s:async = g:async
+let s:async.cmd_max_chars = get(s:async, 'cmd_max_chars', 2000)
 
 if !exists('s:sync.processes')
   let s:async.processes = {}
@@ -160,8 +161,9 @@ fun! async#Exec(ctx)
     " notification
     let ctx.tmp_from_vim = tempname()
     let ctx.tmp_from_vim2 = tempname()
+    let ctx.tmp_to_vim = tempname()
     " start background process
-    let cmd = s:async_helper_path.' vim '.join(map([v:servername, ctx.vim_process_id, ctx.tmp_from_vim, ctx.cmd], 'shellescape(v:val)'),' ')
+    let cmd = s:async_helper_path.' vim '.join(map([v:servername, ctx.vim_process_id, ctx.tmp_from_vim, ctx.tmp_to_vim, s:async.cmd_max_chars, ctx.cmd], 'shellescape(v:val)'),' ')
     let ctx['log-c_executable'] = tempname()
 
     if 0 || get(ctx,'debug_process', 0)
@@ -226,9 +228,18 @@ fun! async#ReceiveNoTry(processId, message, data)
   redraw
 endf
 
-fun! async#Receive(processId, message, data)
+fun! async#Receive(processId, message, ...)
+  if a:0 > 0
+    let data = a:1
+  else
+    let ctx = s:async.processes[a:processId]
+    debug let content = readfile(ctx.tmp_to_vim,'b')[0]
+    let data = eval(content)
+    call delete(ctx.tmp_to_vim)
+  else
+  endif
   try
-    call async#ReceiveNoTry(a:processId, a:message, a:data)
+    call async#ReceiveNoTry(a:processId, a:message, data)
   catch /.*/
     call append('$', v:exception)
   endtry
