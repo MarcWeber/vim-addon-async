@@ -211,6 +211,8 @@ try to help.
 
 TODO:
 ===============================================================================
+* c_executable implementation: pass huge chunks of data using a files.
+  Having many calls is too slow!
 
 * find a way to send interrupt signals (ctrl-c) ?
 
