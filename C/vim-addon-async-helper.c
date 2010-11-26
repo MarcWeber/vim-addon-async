@@ -35,7 +35,7 @@ void usage(char * name){
 }
 
 void my_die(char * msg){
-  printf(msg);
+  printf("%s\n", msg);
   exit(1);
 }
 
