@@ -117,6 +117,11 @@ For now I recommend using impl 2) (gvim) or impl 1) (non gui version of Vim)
     data to Python could be done easily)
 
 
+usage tips:
+==============================================================================
+create your own custom commands like this
+  command AsyncSh  call async_porcelaine#LogToBuffer({'cmd':'/bin/sh -i', 'move_last':1, 'prompt': '^.*\$[$] '})
+
 credits:
 ===============================================================================
 Thanks to:

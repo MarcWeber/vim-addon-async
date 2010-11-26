@@ -119,7 +119,7 @@ fun! async#Exec(ctx)
       let impl = 'native'
     elseif has('clientserver') && v:servername != ''
        if !executable(s:async_helper_path) && 'y' == input('compile c hepler application? [y] ','')
-         exec '! gcc -o'. s:async_helper_path.' '.s:async_helper_path.'.c'
+         exec '!gcc '.shellescape('-o').' '.shellescape(s:async_helper_path).' '.shellescape(s:async_helper_path.'.c')
          if v:shell_error != 0 | throw "compiling helper app failed" | endif
        endif
       let impl = "c_executable"
