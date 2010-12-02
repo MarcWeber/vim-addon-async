@@ -124,12 +124,17 @@ fun! async#Exec(ctx)
        endif
       let impl = "c_executable"
     else
-      if !has('clientserver')
-        throw "no way to execute process. Vim must be either patched or compiled with clientserver support"
-      elseif v:servername == ''
-        throw "no severname provided. Please restart vim and use the --servername option"
-      elseif !executable(s:async_helper_path)
-        throw "Couldn't find vim-addon-async executable"
+      "          failure condition                 message
+      let reasons = [
+            \ [ !has('clientserver')            ,  "no way to execute process. Vim must be either patched or compiled with clientserver support" ],
+            \ [ v:servername == ''              ,  "no severname provided. Please restart vim and use the --servername option" ],
+            \ [ !executable(s:async_helper_path),  "Couldn't find vim-addon-async executable" ]
+          \ ]
+      let reasons = map(filter(reasons,'v:val[0]'), 'v:val[1]')
+      if empty(reasons)
+        throw "unexpected case"
+      else
+        throw "don't know how to execute processes asynchronously on this installation. Possible reasons: ".join(reasons, ', ')
       endif
     endif
   endif
