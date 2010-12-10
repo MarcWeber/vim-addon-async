@@ -87,7 +87,8 @@ For now I recommend using impl 2) (gvim) or impl 1) (non gui version of Vim)
 
   impl 1 native):
   ================
-      (out of order because API changed)
+      (out of order because API changed - current upstream of this patch is here
+      http://github.com/bartman/vim.git )
 
       compile my async version of Vim (github.com/MarcWeber/vim branch "work").
       (-) doesn't work in gui very well yet. That's why its not used in that case
