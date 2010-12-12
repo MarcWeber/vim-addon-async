@@ -235,7 +235,7 @@ Currently only the 'impl 2' implementation is supported fully (see above). This 
   1)  :echo has('clienserver') must report 1
   2)  :echo v:clientserver    must not be null ( pass vim --servername NAME )
   3)  You must have the c executable compiled (The plugin should try doing this for
-      you though)
+      you though). Search for gcc above to learn how to compile it manually
 
   On Mac (OSX) there are known issues. Buy me a Mac or fix it yourself -
   shouldn't be too hard though ;)
