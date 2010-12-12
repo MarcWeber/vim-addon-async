@@ -1,4 +1,33 @@
-list of plugins using vim-addon-async:
+TABLE OF CONTENTS:
+====================
+
+
+    1) list of plugins using vim-addon-async
+
+    2) GOAL (provide API for Vim users)
+
+    3) porcelain LogToBuffer running interactive interpreter shells within Vim buffers
+
+    4) installation & implementation details
+
+    5) usage tips
+
+    6) credits
+
+    7) related work
+
+    8) yet another example
+
+    8) tips
+
+    10) TROUBLE?
+
+    11) testing new implementations
+
+    12) TODO
+
+
+1) list of plugins using vim-addon-async:
 ===============================================================================
 - ensime (Scala server providing fast type checking and completion)
 - vim-addon-xdebug (xdebug implementation for Vim)
@@ -8,7 +37,7 @@ two REPL (read print eval loop) implementations are available for
   - Ruby
 providing completion on objects etc.
 
-GOAL (provide API for Vim users)
+2) GOAL (provide API for Vim users)
 ==============================================================================
 provide an async communication interface for VimL which can be implemented in different ways.
 
@@ -33,7 +62,7 @@ etc easily.
 
 Different implementations will be provided. See below.
 
-porcelain LogToBuffer running interactive interpreter shells within Vim buffers:
+3) porcelain LogToBuffer running interactive interpreter shells within Vim buffers:
 ==============================================================================
 
 How powerful this simple interface is is illustrated by
@@ -80,7 +109,7 @@ delayed. In the LogToBuffer updates are delayed when
 - you're in command line or command win buffer (q:)
   Reason: You can't switch buffers or tabs when its open.
 
-installation & implementation details:
+4) installation & implementation details:
 ===============================================================================
 
 For now I recommend using impl 2) (gvim) or impl 1) (non gui version of Vim)
@@ -118,12 +147,12 @@ For now I recommend using impl 2) (gvim) or impl 1) (non gui version of Vim)
     data to Python could be done easily)
 
 
-usage tips:
+5) usage tips:
 ==============================================================================
 create your own custom commands like this
   command AsyncSh  call async_porcelaine#LogToBuffer({'cmd':'/bin/sh -i', 'move_last':1, 'prompt': '^.*\$[$] '})
 
-credits:
+6) credits:
 ===============================================================================
 Thanks to:
 
@@ -134,7 +163,7 @@ Thanks to:
     Someone (me?) still has to make it complete.
 
 
-related work:
+7) related work:
 ==============================================================================
 Nico Raffo told me that he's been working on a idle timer like event for Vim.
 This would be another perfect match to provide a different implementation.
@@ -150,7 +179,7 @@ IMHO their only issue is that they block Vim if have long running tasks.
   Screen (vim + gnu screen/tmux) : Simulate a split shell, using gnu screen or tmux:
   http://www.vim.org/scripts/script.php?script_id=2711
 
-yet two another examples:
+8) yet two another examples:
 ==============================================================================
 
 VIML CODE EXAMPLE: >
@@ -194,40 +223,54 @@ VIML CODE EXAMPLE: >
   endf
   call async_exec(ctx2)
 
-TIPS:
+9) TIPS:
 ==============================================================================
 this debugging worked best for me:
 call append('$', string)
 
-TROUBLE?
+10) TROUBLE?
 ==============================================================================
+Currently only the 'impl 2' implementation is supported fully (see above). This means
+
+  1)  :echo has('clienserver') must report 1
+  2)  :echo v:clientserver    must not be null ( pass vim --servername NAME )
+  3)  You must have the c executable compiled (The plugin should try doing this for
+      you though)
+
+  On Mac (OSX) there are known issues. Buy me a Mac or fix it yourself -
+  shouldn't be too hard though ;)
+  I recommend using a command like this for debugging:
+
+  call async_porcelaine#LogToBuffer({'cmd':'/bin/sh -i', 'debug_process' : 1 }) 
+
+
+More notes:
+
+  Using the client-server I faced several issues:
+
+    - if there is a VimL error you don't see it (try using debug or run the code
+      manually within Vim)
+
+    - some commands seem to behave strange.
+      Eg in vim-addon-xdebug I had to switch off syntax else Vim crashes. Also
+      "normal jdd" seem to never return in one case
+
+  Summary: Everything seems to work fine if you're willing to spend some time on
+  finding workarounds on some commands. If you have issues contact me and I'll
+  try to help.
+
+
+11) testing new implementations
+===============================
+
 try running this test which checks whether all characters (0 - 255) are quoted
 correctly:
     call vim_addon_async_tests#Binary()
     call vim_addon_async_tests#Chunksize()
 
-Using the client-server I faced several issues:
 
-  - if there is a VimL error you don't see it (try using debug or run the code
-    manually within Vim)
-
-  - some commands seem to behave strange.
-    Eg in vim-addon-xdebug I had to switch off syntax else Vim crashes. Also
-    "normal jdd" seem to never return in one case
-
-Summary: Everything seems to work fine if you're willing to spend some time on
-finding workarounds on some commands. If you have issues contact me and I'll
-try to help.
-
-
-TODO:
+12) TODO:
 ===============================================================================
-* c_executable implementation: pass huge chunks of data using a files.
-  Having many calls is too slow!
-
-* find a way to send interrupt signals (ctrl-c) ?
-
-* LogToBuffer could be made even smarter: make it skip repeating lines. Make it
 
 * find out about the prompt automatically by pressing enter multiple times.
   (eg irb also prints the line number. So maybe it should not be skipped?)
