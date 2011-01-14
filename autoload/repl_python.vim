@@ -30,28 +30,79 @@ let s:wait  = "please wait"
 " let g:ruby_prompt = '\%((rdb:\d\+) \|irb([^)]*):\d\+:\d\+>\)'
 
 " called with b:ctx context
-fun!  repl_python#HandlePythonCompletion(data) dict
+fun! repl_python#HandlePythonCompletion(...) dict
+  " add debug here for debugging
+  call call(function("repl_python#HandlePythonCompletion2"), a:000, self)
+endf
+
+fun!  repl_python#HandlePythonCompletion2(data) dict
 
   " call append('$', string([self.completion_state, a:data]))
   call add(g:aaa, a:data)
 
-  let match = matchlist(a:data, self.python_match_result_and_prompt)
-
   if self.completion_state == -1
+    " receiving dir() result
+
+    let match = matchlist(a:data, self.python_match_result_and_prompt)
+
     let self.completion_state += 1
 
     " read list of methods
-
     " this is evil! but I'm too lazy to find a regex for parsing the list
+    let dirs = eval(match[1])
+
+    let more_info =
+          \  'import inspect'."\n"
+          \ .'def func_info_x234(f, name):'."\n"
+          \ .'  doc = "_"'."\n"
+          \ .'  arity = 0'."\n"
+          \ .'  spec = []'."\n"
+          \ .'  try:'."\n"
+          \ .'    doc = f.__doc__'."\n"
+          \ .'  except Exception, e:'."\n"
+          \ .'    doc = "-"'."\n"
+          \ .'  try:'."\n"
+          \ .'    spec = inspect.getargspec(f)'."\n"
+          \ .'    spec = [spec.args, spec.varargs, spec.keywords, spec.defaults.__str__()]'."\n"
+          \ .'  except Exception, e:'."\n"
+          \ .'    spec = []'."\n"
+          \ .'  return [name, doc, spec]'."\n"
+          \ .''."\n"
+          \ .'['.join( map(dirs, "'func_info_x234('.".string(self.thing).'.".".v:val.", ".string(v:val).")"'), ',').']'."\n"
+
+    " 1) python reply of dir()
+    " 5) python prompt
+    let self.python_match_result_and_prompt2 = 
+          \ '\.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. >>> \(.*\)\n>>> >>> '
+    call self.dataTillRegexMatchesLine(self.python_match_result_and_prompt2, funcref#Function(function('repl_python#HandlePythonCompletion'), {'self': b:ctx } ))
+
+    " [here]
+    call self.write(more_info."\n")
+    let g:more_info = more_info
+
+  elseif self.completion_state == 0
+    " receiving result of second query sent [here]
+
+    let match2 = matchlist(a:data, self.python_match_result_and_prompt2)
+
+    " trick to make None known to Vim when evaluating result
+    let None = "None"
+
     " result
     let self.completions = []
-    for name in eval(match[1])
-      let info = ' arity: '. arity
-      " TODO find a way to get arity see [2]
-      call add(self.completions, {'word': name })
+    " this is evil again
+    let self.res = eval(match2[1])
+    for [name, doc, spec] in self.res
+      let open = ''
+      if len(spec) > 0 && len(eval(spec[0])) > 0
+        let open = '('
+      endif
+      call add(self.completions, {'word': name.open, 'menu': string(spec),'info': name.": ".string(spec)."\n".substitute(doc, '\\n', "\n",'g') })
     endfor
     
+    " restart completion
     call feedkeys(repeat("\<bs>",len(s:wait))."\<c-x>\<c-o>")
+  endif
 
 endf
 
@@ -84,7 +135,6 @@ fun! repl_python#RubyOmniComplete(findstart, base)
       " helper function registereing HandlePythonCompletion callback which
       " receives data until next scala> prompt is seen
       fun! b:ctx.intercept()
-        let rdb = '\%((rdb:\d\+) \)\?'
         " 1) python reply of dir()
         " 5) python prompt
         let self.python_match_result_and_prompt = 
@@ -98,7 +148,8 @@ fun! repl_python#RubyOmniComplete(findstart, base)
       
       let line = matchstr(b:line, '\%(> \)\?\zs.*\ze')
       " drop last '.'
-      call b:ctx.write('dir('.line[:-2].')'."\n")
+      let b:ctx.thing = line[:-2]
+      call b:ctx.write('dir('.b:ctx.thing.')'."\n")
       call feedkeys(s:wait)
 
       return []

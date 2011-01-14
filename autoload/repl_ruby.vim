@@ -48,6 +48,7 @@ fun!  repl_ruby#HandleRubyCompletion(data) dict
     endfor
     
     call feedkeys(repeat("\<bs>",len(s:wait))."\<c-x>\<c-o>")
+  endif
 
 endf
 
