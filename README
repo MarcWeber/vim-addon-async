@@ -34,8 +34,13 @@ TABLE OF CONTENTS:
 
 two REPL (read print eval loop) implementations are available for
   - Scala
-  - Ruby
+  - Ruby [1]
+  - Python [1]
 providing completion on objects etc.
+
+[1]: the interpreter is used. eg dir(obj) for python and .methods for Ruby.
+This means you have to take care that you don't cause side effects when
+invoking the completion!
 
 2) GOAL (provide API for Vim users)
 ==============================================================================
@@ -150,7 +155,13 @@ For now I recommend using impl 2) (gvim) or impl 1) (non gui version of Vim)
 5) usage tips:
 ==============================================================================
 create your own custom commands like this
-  command AsyncSh  call async_porcelaine#LogToBuffer({'cmd':'/bin/sh -i', 'move_last':1, 'prompt': '^.*\$[$] '})
+
+  command! AsyncSh  call async_porcelaine#LogToBuffer({'cmd':'/bin/sh -i', 'move_last':1, 'prompt': '^.*\$[$] '})
+  command! AsyncCoq call async_porcelaine#LogToBuffer({'cmd':'coqtop', 'move_last':1, 'prompt': '^Coq < '})
+  command! AsyncRubyIrb call repl_ruby#RubyBuffer({'cmd':'irb','move_last' : 1})
+  command! AsyncPython call repl_python#PythonBuffer({'cmd':'python -i','move_last' : 1})
+  command! AsyncSML call repl_ruby#RubyBuffer({'cmd':'sml','move_last' : 1, 'prompt': '^- '})
+
 
 6) credits:
 ===============================================================================
