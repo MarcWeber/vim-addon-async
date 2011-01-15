@@ -37,6 +37,7 @@ fun! async_porcelaine#LogToBuffer(ctx)
   let b:ctx = ctx
   let prefix = '> '
   let ctx.cmd_line_regex = '^'.prefix.'\zs.*\ze'
+  let ctx.pending = "\n"
   " list of functions which will get data before it will be processed the
   " normal way. It must process the data it can handle and return 0 if it
   " wants more or the rest if its done and got too many characters
@@ -45,9 +46,9 @@ fun! async_porcelaine#LogToBuffer(ctx)
   exec 'noremap <buffer> o o'.prefix
   exec 'noremap <buffer> O O'.prefix
   exec 'inoremap <buffer> <cr> <cr>'.prefix
-  exec 'noremap <buffer> <space><cr> :call<space>b:ctx.write(async#GetLines('.string(ctx.cmd_line_regex).')."\n")<cr>'
-  exec 'inoremap <buffer> <space><cr> <esc>:call<space>b:ctx.write(async#GetLines('.string(ctx.cmd_line_regex).')."\n")<cr>'
-  vnoremap <buffer> <cr> y:call<space>b:ctx.write(getreg('"'))<cr>
+  exec 'noremap <buffer> <space><cr> :call<space>b:ctx.send_command(async#GetLines('.string(ctx.cmd_line_regex).')."\n")<cr>'
+  exec 'inoremap <buffer> <space><cr> <esc>:call<space>b:ctx.send_command(async#GetLines('.string(ctx.cmd_line_regex).')."\n")<cr>'
+  vnoremap <buffer> <cr> y:call<space>b:ctx.send_command(getreg('"'))<cr>
 
   augroup VIM_ADDON_ASYNC_AUTO_KILL
     autocmd BufWipeout <buffer> call b:ctx.kill()
@@ -58,18 +59,30 @@ fun! async_porcelaine#LogToBuffer(ctx)
   endf
   let ctx.receive = function('async_porcelaine#Receive')
 
-  " interception implementation (get data until a regex matches) {{{2
+  " interception implementation (get data until a regex matches) 
   let ctx.interceptImpl = function('async_porcelaine#InterceptIpml')
   fun! ctx.dataTillRegexMatchesLine(regex, callback, ...)
     let self_ = a:0 > 0 ? a:1 : self
     call add(self.interceptors, funcref#Function(self.interceptImpl, {'args': [a:regex, a:callback], 'self': self_}))
   endf
   " }}}2
+  
+  fun! ctx.send_command(s)
+    " force result appearing on a new line
+    let self.pending = "\n"
+    call self.write(a:s)
+  endf
 
   let g:aaa= []
+
+  fun! ctx.delayed_work(...)
+    call call(self.delayed_work2, a:000, self)
+  endf
+
   " default implementation: Add data to the buffer {{{2
-  fun! ctx.delayed_work(text, ...)
+  fun! ctx.delayed_work2(text, ...)
     call add(g:aaa, a:text)
+
     " try
       " debug output like this
       " call append('0', 'rec: '.substitute(substitute(a:text,'\r', '\\r','g'), '\n', '\\n','g'))
@@ -78,36 +91,24 @@ fun! async_porcelaine#LogToBuffer(ctx)
       " write the "p" to the last line, but remember that there was no trailing
       " \n by assigning it to pending.
 
-      let lines = split(a:text, '[\r\n]\+', 1)
-      if has_key(self, 'pending')
-        " drop pending line, it will be readded with rest of line
-        call async#ExecInBuffer(self.bufnr, "normal Gdd")
-        let lines[0] = self.pending .lines[0]
-      endif
-      if lines[-1] == '' || (has_key(self, 'prompt') &&  lines[-1] =~ self.prompt)
-        " trailing \n or prompt. drop it
-        silent! unlet self.pending
+      let lines = split(get(self,'pending','').a:text, '[\r\n]\+', 1)
+      silent! unlet self.pending
+      if lines[-1] == '' || (has_key(self, 'prompt') && lines[-1] =~ self.prompt)
+        " force adding \n when reply arrives after user has typed prompt
+        let self.pending = "\n"
         call remove(lines, -1)
-      else
-        " no trailing \n. Assume continuation will be sent in next block
-        let self.pending = lines[-1]
-        let lines[-1] = lines[-1].' ... waiting for \n'
       endif
 
       " let lines = map(lines, string('<: ').'.v:val')
-      let lines = filter(lines, 'v:val != ""')
+      " let lines = filter(lines, 'v:val != ""')
       if has_key(self,'regex_drop')
         let lines = filter(lines, 'v:val !~'.string(self.regex_drop))
       endif
-      " call append('$', lines)
-      "
-      " if has_key(self, 'move_last'))
-        " exec "normal G"
-      " endif
+      
       if has_key(self, 'line_prefix')
         call map(lines, string(self.line_prefix).'.v:val')
       endif
-      call async#ExecInBuffer(self.bufnr, function('async#AppendBuffer'), [lines, has_key(self, 'move_last')])
+      call async#ExecInBuffer(self.bufnr, function('async_porcelaine#AppendBuffer'), [lines, has_key(self, 'move_last')])
     " catch /.*/
     "  call append('$',v:exception)
     " endtry
@@ -124,7 +125,24 @@ fun! async_porcelaine#LogToBuffer(ctx)
   return ctx
 endf
 
+
+fun! async_porcelaine#AppendBuffer(lines, moveLast)
+  " first line is always appended to last line of buffer because not each
+  " chunk of bytes contains a trailing \n
+  let append_last = get(a:lines, 0, '')
+  if append_last != ''
+    call setline('$', getline('$').append_last)
+  endif
+  call append('$', a:lines[1:])
+  if a:moveLast
+    normal G
+  endif
+endf
+
 fun! async_porcelaine#Receive(...) dict
+  call call(function('async_porcelaine#Receive2'), a:000, self)
+endf
+fun! async_porcelaine#Receive2(...) dict
   let args = copy(a:000)
   while len(self.interceptors) > 0 && len(args[0] > 0)
     " call append('$', 'intercept mit '.string(args))

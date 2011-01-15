@@ -45,6 +45,26 @@ fun!  repl_python#HandlePythonCompletion2(data) dict
 
     let match = matchlist(a:data, self.python_match_result_and_prompt)
 
+
+    " set to 1 to not get additional info (use for debugging ?)
+    if 0
+      " read list of methods
+
+      " this is evil! but I'm too lazy to find a regex for parsing the list
+      " result
+      let self.completions = []
+      for name in eval(match[1])
+        let info = ' arity: '. arity
+        " TODO find a way to get arity see [2]
+        call add(self.completions, {'word': name })
+      endfor
+      " restart completion
+      call feedkeys(repeat("\<bs>",len(s:wait))."\<c-x>\<c-o>")
+      return
+
+    endif
+
+
     let self.completion_state += 1
 
     " read list of methods
@@ -73,7 +93,7 @@ fun!  repl_python#HandlePythonCompletion2(data) dict
     " 1) python reply of dir()
     " 5) python prompt
     let self.python_match_result_and_prompt2 = 
-          \ '\.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. >>> \(.*\)\n>>> >>> '
+          \ '^>>> \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. >>> \(.*\)\n>>> >>> '
     call self.dataTillRegexMatchesLine(self.python_match_result_and_prompt2, funcref#Function(function('repl_python#HandlePythonCompletion'), {'self': b:ctx } ))
 
     " [here]
@@ -95,6 +115,8 @@ fun!  repl_python#HandlePythonCompletion2(data) dict
     for [name, doc, spec] in self.res
       let open = ''
       if len(spec) > 0 && len(eval(spec[0])) > 0
+        let open = '('
+      elseif doc =~ '^[^(]\+('
         let open = '('
       endif
       call add(self.completions, {'word': name.open, 'menu': string(spec),'info': name.": ".string(spec)."\n".substitute(doc, '\\n', "\n",'g') })
