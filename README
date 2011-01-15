@@ -2,7 +2,7 @@ TABLE OF CONTENTS:
 ====================
 
 
-    1) list of plugins using vim-addon-async
+    1) list of plugins using vim-addon-async (SCREENSHOTS!)
 
     2) GOAL (provide API for Vim users)
 
@@ -32,15 +32,19 @@ TABLE OF CONTENTS:
 - ensime (Scala server providing fast type checking and completion)
 - vim-addon-xdebug (xdebug implementation for Vim)
 
-two REPL (read print eval loop) implementations are available for
-  - Scala
-  - Ruby [1]
-  - Python [1]
+REPL (read print eval loop) implementations are available for
+  - Scala           http://mawercer.de/~marc/vim-addon-async-scala-repl.jpg
+  - Ruby [1]        http://mawercer.de/~marc/vim-addon-async-irb-repl.jpg
+  - Python [1]      http://mawercer.de/~marc/vim-addon-async-python-repl.jpg
 providing completion on objects etc.
 
 [1]: the interpreter is used. eg dir(obj) for python and .methods for Ruby.
 This means you have to take care that you don't cause side effects when
 invoking the completion!
+
+Example showing how to run a background process in the async buffer while
+continuing typing in another buffer:
+http://mawercer.de/~marc/vim-addon-async-sh-example.jpg
 
 2) GOAL (provide API for Vim users)
 ==============================================================================
