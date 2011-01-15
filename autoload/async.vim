@@ -282,7 +282,7 @@ endf
 
 
 fun! async#DelayUntilNotDisturbing(key, action)
-  let a:action['delay-when'] = get(a:action,'delay-when', []) + ["in-cmdbuf","in-insertmode","in-commandline"]
+  let a:action['delay-when'] = get(a:action,'delay-when', []) + ["in-cmdbuf","non-normal","in-commandline"]
   call async#DelayWhen(a:key, a:action)
 endf
 
@@ -305,6 +305,7 @@ fun! async#RunDelayedActions()
       for delay in get(action, 'delay-when', [])
         if   (delay == "in-cmdbuf" && s:async.in_cmd)
         \ || (delay == "in-insertmode"  && mode() == 'i')
+        \ || (delay == "non-normal" && (s:async.in_cmd || mode() != 'n'))
         \ || (delay == "in-commandline"  && mode() == 'c')
         \ || (delay[:13] == "buf-invisible:" && bufwinnr(1*delay[14:]) == -1)
           let run = 0
