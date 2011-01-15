@@ -13,7 +13,7 @@
 fun! repl_python#PythonBuffer(...)
   let ctx = a:0 > 0 ? a:1 : {}
   call async_porcelaine#LogToBuffer(ctx)
-  call async#ExecInBuffer(ctx.bufnr, 'setlocal omnifunc=repl_python#RubyOmniComplete | setlocal completeopt=preview,menu,menuone')
+  call async#ExecInBuffer(ctx.bufnr, 'setlocal omnifunc=repl_python#PythonOmniComplete | setlocal completeopt=preview,menu,menuone')
   let ctx.marker = "RUBY_COMPLETION_ASSISTANCE_END"
 endf
 
@@ -29,6 +29,20 @@ let s:wait  = "please wait"
 
 " let g:ruby_prompt = '\%((rdb:\d\+) \|irb([^)]*):\d\+:\d\+>\)'
 
+let s:py_helper_fun_file = expand('<sfile>:h').'/py-helper-fun.py'
+
+" return function which is used to generate the completion items
+" This function is interpreted and run in the python interpreter
+" Alse return the regex which intercepts the completion result
+fun! repl_python#CompletionFunc()
+  let imports = ['import inspect']
+
+  " see autoload/py-helper-fun.py
+  let fun_code = readfile( s:py_helper_fun_file )+[]
+  return { 'pattern' : '^>>> '. repeat('\.\.\. ', len(fun_code)) .'>>> \(.*\)\n>>> ',
+         \ 'py_code' : join(map(imports + fun_code, 'v:val.'.string("\n")),'') }
+endf
+
 " called with b:ctx context
 fun! repl_python#HandlePythonCompletion(...) dict
   " add debug here for debugging
@@ -43,67 +57,7 @@ fun!  repl_python#HandlePythonCompletion2(data) dict
   if self.completion_state == -1
     " receiving dir() result
 
-    let match = matchlist(a:data, self.python_match_result_and_prompt)
-
-
-    " set to 1 to not get additional info (use for debugging ?)
-    if 0
-      " read list of methods
-
-      " this is evil! but I'm too lazy to find a regex for parsing the list
-      " result
-      let self.completions = []
-      for name in eval(match[1])
-        let info = ' arity: '. arity
-        " TODO find a way to get arity see [2]
-        call add(self.completions, {'word': name })
-      endfor
-      " restart completion
-      call feedkeys(repeat("\<bs>",len(s:wait))."\<c-x>\<c-o>")
-      return
-
-    endif
-
-
-    let self.completion_state += 1
-
-    " read list of methods
-    " this is evil! but I'm too lazy to find a regex for parsing the list
-    let dirs = eval(match[1])
-
-    let more_info =
-          \  'import inspect'."\n"
-          \ .'def func_info_x234(f, name):'."\n"
-          \ .'  doc = "_"'."\n"
-          \ .'  arity = 0'."\n"
-          \ .'  spec = []'."\n"
-          \ .'  try:'."\n"
-          \ .'    doc = f.__doc__'."\n"
-          \ .'  except Exception, e:'."\n"
-          \ .'    doc = "-"'."\n"
-          \ .'  try:'."\n"
-          \ .'    spec = inspect.getargspec(f)'."\n"
-          \ .'    spec = [spec.args, spec.varargs, spec.keywords, spec.defaults.__str__()]'."\n"
-          \ .'  except Exception, e:'."\n"
-          \ .'    spec = []'."\n"
-          \ .'  return [name, doc, spec]'."\n"
-          \ .''."\n"
-          \ .'['.join( map(dirs, "'func_info_x234('.".string(self.thing).'.".".v:val.", ".string(v:val).")"'), ',').']'."\n"
-
-    " 1) python reply of dir()
-    " 5) python prompt
-    let self.python_match_result_and_prompt2 = 
-          \ '^>>> \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. \.\.\. >>> \(.*\)\n>>> >>> '
-    call self.dataTillRegexMatchesLine(self.python_match_result_and_prompt2, funcref#Function(function('repl_python#HandlePythonCompletion'), {'self': b:ctx } ))
-
-    " [here]
-    call self.write(more_info."\n")
-    let g:more_info = more_info
-
-  elseif self.completion_state == 0
-    " receiving result of second query sent [here]
-
-    let match2 = matchlist(a:data, self.python_match_result_and_prompt2)
+    let match = matchlist(a:data, self.py_compl.pattern)
 
     " trick to make None known to Vim when evaluating result
     let None = "None"
@@ -111,12 +65,12 @@ fun!  repl_python#HandlePythonCompletion2(data) dict
     " result
     let self.completions = []
     " this is evil again
-    let self.res = eval(match2[1])
-    for [name, doc, spec] in self.res
+    let self.res = eval(match[1])
+    for [type, name, doc, spec] in self.res
       let open = ''
       if len(spec) > 0 && len(eval(spec[0])) > 0
         let open = '('
-      elseif doc =~ '^[^(]\+('
+      elseif doc =~ '^[^(]\+(' && doc !~ '^int(x[, base])\|str(object) -> string'
         let open = '('
       endif
       call add(self.completions, {'word': name.open, 'menu': string(spec),'info': name.": ".string(spec)."\n".substitute(doc, '\\n', "\n",'g') })
@@ -128,7 +82,7 @@ fun!  repl_python#HandlePythonCompletion2(data) dict
 
 endf
 
-fun! repl_python#RubyOmniComplete(findstart, base)
+fun! repl_python#PythonOmniComplete(findstart, base)
 
   if a:findstart
     let [bc,ac] = vim_addon_completion#BcAc()
@@ -152,26 +106,31 @@ fun! repl_python#RubyOmniComplete(findstart, base)
       let b:line = line
       let b:ctx.completion_state = -1
 
-      silent! unlet b:ctx.intercept
-
-      " helper function registereing HandlePythonCompletion callback which
-      " receives data until next scala> prompt is seen
-      fun! b:ctx.intercept()
-        " 1) python reply of dir()
-        " 5) python prompt
-        let self.python_match_result_and_prompt = 
-              \ '^\(.*\)\n>>> '
-        call self.dataTillRegexMatchesLine(self.python_match_result_and_prompt, funcref#Function(function('repl_python#HandlePythonCompletion'), {'self': b:ctx } ))
-      endf
-
-      call b:ctx.intercept()
-
       " b:line is evaluated multiple times which is bad.
       
       let line = matchstr(b:line, '\%(> \)\?\zs.*\ze')
       " drop last '.'
-      let b:ctx.thing = line[:-2]
-      call b:ctx.write('dir('.b:ctx.thing.')'."\n")
+
+      if line[-2:] == '["' || line[-2:] == "['"
+        let b:ctx.completion_type = 'key'
+        let b:ctx.thing = line[:-3]
+        let b:ctx.completion_types = ['dict']
+      elseif line[-1:] == '.'
+        let b:ctx.completion_type = 'dir'
+        let b:ctx.completion_types = ['dir']
+        let b:ctx.thing = line[:-2]
+      else
+        " nothing before cursor? use global scope completion completion
+        let b:ctx.completion_type = 'global'
+        let b:ctx.completion_types = ['dict']
+        let b:ctx.thing = "globals()"
+      endif
+      
+      let b:ctx.py_compl = repl_python#CompletionFunc()
+      call b:ctx.dataTillRegexMatchesLine(b:ctx.py_compl.pattern, funcref#Function(function('repl_python#HandlePythonCompletion'), {'self': b:ctx } ))
+      call b:ctx.write(b:ctx.py_compl.py_code."\n"
+        \ .'print func_info_x234('. b:ctx.thing .','.string(b:ctx.completion_types).')'."\n")
+
       call feedkeys(s:wait)
 
       return []

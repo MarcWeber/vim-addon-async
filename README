@@ -36,6 +36,9 @@ REPL (read print eval loop) implementations are available for
   - Scala           http://mawercer.de/~marc/vim-addon-async-scala-repl.jpg
   - Ruby [1]        http://mawercer.de/~marc/vim-addon-async-irb-repl.jpg
   - Python [1]      http://mawercer.de/~marc/vim-addon-async-python-repl.jpg
+    works: dict["    : list keys
+           obj.      : list dir() output
+           (nothing) : list globals
 providing completion on objects etc.
 
 [1]: the interpreter is used. eg dir(obj) for python and .methods for Ruby.
