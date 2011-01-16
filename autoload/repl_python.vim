@@ -35,11 +35,11 @@ let s:py_helper_fun_file = expand('<sfile>:h').'/py-helper-fun.py'
 " This function is interpreted and run in the python interpreter
 " Alse return the regex which intercepts the completion result
 fun! repl_python#CompletionFunc()
-  let imports = ['import inspect']
+  let imports = ['import inspect', 'import string']
 
   " see autoload/py-helper-fun.py
   let fun_code = readfile( s:py_helper_fun_file )+[]
-  return { 'pattern' : '^>>> '. repeat('\.\.\. ', len(fun_code)) .'>>> \(.*\)\n>>> ',
+  return { 'pattern' : '^>>> >>> '. repeat('\.\.\. ', len(fun_code)) .'>>> \(.*\)\n>>> ',
          \ 'py_code' : join(map(imports + fun_code, 'v:val.'.string("\n")),'') }
 endf
 

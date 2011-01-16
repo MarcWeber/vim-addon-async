@@ -1,5 +1,12 @@
 def func_info_x234(thing, completion_types):
   """helper function for Vim repl completion"""
+  def toVim(thing):
+    if type(thing) == type([]):
+      return "[%s]" % (",".join([toVim(x) for x in thing]))
+    elif type(thing) == type(""):
+      return '"%s"' % thing.replace('\\','\\\\').replace('"', '\\"').replace("\n", "\\n")
+    else:
+      return str(thing)
   def toList(name, thing, type):
       doc = "_"
       arity = 0
@@ -21,4 +28,4 @@ def func_info_x234(thing, completion_types):
   elif completion_types.__contains__("dir"):
     for d in dir(thing):
       result.append(toList(d, getattr(thing,d), "dir"))
-  return result
+  return toVim(result)

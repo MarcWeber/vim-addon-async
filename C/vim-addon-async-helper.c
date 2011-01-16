@@ -86,9 +86,6 @@ void vimQuote(char * ptr, int size, char * target){
   while (size-- > 0){
     switch (*ptr){
       case '\\' :  
-        // why do I have to quote \ twice?
-        *target++ = '\\';
-        *target++ = '\\';
         *target++ = '\\';
         *target++ = '\\';
         break;

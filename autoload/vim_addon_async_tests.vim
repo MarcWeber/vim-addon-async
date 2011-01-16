@@ -9,27 +9,50 @@ fun! vim_addon_async_tests#TestLineBuffering()
 endf
 
 fun! vim_addon_async_tests#Binary()
+  echoe "you should see another error message telling that there were 0 failures"
   let s = ''
   for i in range(1,255)
-    let s .= nr2char(i)
+    let s .= nr2char(i).nr2char(i)
   endfor
   let ctx =  {'zero_aware':1, 'cmd':'cat'}
-  let ctx.data = ['',s]
+  let ctx.data = s
   let ctx.pending = [""]
 
-  fun ctx.receive(data, ...)
-    let self.pending[-1] = self.pending[-1].a:data[0]
-    let self.pending += a:data[1:]
+  let g:binary_test_ctx = ctx
 
-    let ok = self.data == self.pending
-    if ok
-      call feedkeys(":echoe 'success'\<cr>")
-      call self.kill()
+  let ctx.nr = 0
+  let ctx.failures = 0
+
+  fun ctx.receive_debug(data) abort
+    if type(a:data) != type([])
+      call feedkeys(":echoe 'wrong type'\<cr>")
     endif
+    if a:data[0] != ''
+      call feedkeys(":echoe 'wrong thing'\<cr>")
+    endif
+    let data = a:data[1]
+    for i in range(0,len(data)-1)
+      let got = data[i]
+      let expected = self.data[self.nr]
+      if got != expected
+        let self.failures += 1
+        call feedkeys(":echoe 'error with nr " . ci ." got ".  char2nr(got) ." expected ". char2nr(expected) ."'\<cr>")
+      endif
+      let self.nr += 1
+
+      if self.nr >= len(self.data)
+        call feedkeys(":echoe 'end. you should have seen no additional errors. errors: ". self.failures ." '\<cr>")
+        call self.kill()
+      endif
+    endfor
+  endf
+
+  fun ctx.receive(data, ...)
+    call self.receive_debug(a:data)
   endf
 
   call async#Exec(ctx)
-  call ctx.write(ctx.data)
+  call ctx.write(['', ctx.data])
 
 endf
 
