@@ -1,4 +1,5 @@
-if !exists('g:async') | let g:async = {} | endif | let s:async = g:async
+if !exists('g:async') | let g:async = {} | endif | let s:c = g:async
+let s:c.line_prefix = get(s:c,'line_prefix', '> ')
 
 inoremap <buffer> \\async-magic <c-r>
 noremap  <buffer> \\async-magic :
@@ -11,3 +12,6 @@ augroup VIM_ADDON_ASYNC
 augroup end
 
 let g:async.in_cmd = 0
+
+
+sign define async_input_start text=_ linehl=

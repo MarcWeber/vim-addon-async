@@ -71,15 +71,12 @@ let g:rec = []
 " example : async#GetLines('^>\zs.*\ze')
 " Lines which have been executed are prefixed by ' ' so that they won't be
 " executed a second time (some commands don't have a result)
-fun! async#GetLines(prefix)
-  let idx = line('.')
-  let lines = []
-  while getline(idx) =~ a:prefix
-    let l = getline(idx)
-    call add(lines, matchstr(l, a:prefix))
-    let idx -= 1
-  endw
-  return join(reverse(lines),"\n")
+fun! async#GetLines()
+  let current_line = line('.')
+  if !exists('b:async_input_start') || b:async_input_start > current_line
+    throw "can't determine lines to be sent to process. Select it lines visually (V) and press <cr>, please, or move cursor below '_' mark"
+  endif
+  return join(getline(b:async_input_start, current_line),"\n")
 endf
 
 " }}}

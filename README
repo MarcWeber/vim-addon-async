@@ -10,6 +10,8 @@ TABLE OF CONTENTS:
 
     4) installation & implementation details
 
+    4b) customization
+
     5) usage tips
 
     6) credits
@@ -81,48 +83,48 @@ How powerful this simple interface is is illustrated by
 LogToBuffer which is porcelain on top of the API:
 
   call async_porcelaine#LogToBuffer({'cmd':'python -i', 'move_last':1, 'prompt': '^>>> $'})
-  then type:
-    oprint "abc"<space><cr>
-  (everything started by "> " will be treated as text to be sent to python when
-  <space><cr> is typed in insert mode
-  Alternatively you can visually select lines and press <cr> in visual mode to
-  send the text to the buffer as is (thus no leading > will be removed)
 
-  See commentary of the LogToBuffer function has more sophisticated examples.
-
-  Sample python session:
-
-  pid: 24067
-  Python 2.6.5 (r265:79063, May  9 2010, 14:26:02) 
-  [GCC 4.4.3] on linux2
-  Type "help", "copyright", "credits" or "license" for more information.
-  > print "hello world"
-  hello world
-  > num1 = 40 #1
-  > num2 = 42 #2
-  > for i in range(num1, num2):
-  >    print i
-  > 
-  ... ... 40
-  41
-  > 
-
-  Pay attention: the async#GetLines script will sent #1 and #2 when
-  pressing <space><cr> in the num2 line. I recommend using <c-u><cr>
-  in order to enter a blank line if you want to prevent this
+should yield:
 
 
-(the ... sent by the interpreter still has to be removed ! TODO)
+    pid: 27475, bufnr: 4
+    > Python 2.6.5 (r265:79063, May  9 2010, 14:26:02) 
+    > [GCC 4.4.3] on linux2
+  _ > Type "help", "copyright", "credits" or "license" for more information.
 
+
+Note the "_" Everything below that will be sent to the interpreter's stdin when pressing <space><cr>
+You can also visually select arbitrary text and press <cr> to send those lines instead.
+
+Eg try this:
+
+    # this comment starts at "no" indentation. keep the empty line for python interpreter!
+    def foo(text):
+      print text
+
+    foo("hello world")
+
+Pay attention: the async#GetLines script will sent #1 and #2 when
+pressing <space><cr> in the num2 line. I recommend using <c-u><cr>
+in order to enter a blank line if you want to prevent this
+
+and you should get the reply:
+
+> >>> ... ... ... >>> hello world
+
+the >>> ... .... ... >>> could be filtered by the "prompt" setting.
 
 Note: because adding lines to background buffers are be annoying actions can be
 delayed. In the LogToBuffer updates are delayed when
-- you're in insert mode (Vim should not disturb you when typing)
+- you're in insert / visual mode (Vim should not disturb you when typing, selecting)
 - you're in command line or command win buffer (q:)
   Reason: You can't switch buffers or tabs when its open.
 
 4) installation & implementation details:
 ===============================================================================
+
+This plugin depends on vim-addon-signs. Thus I recommend using
+vim-addon-manager for installing this addon.
 
 For now I recommend using impl 2) (gvim) or impl 1) (non gui version of Vim)
 
@@ -158,6 +160,17 @@ For now I recommend using impl 2) (gvim) or impl 1) (non gui version of Vim)
   - python (also calling back into Vim cause its not threadsafe, but passing
     data to Python could be done easily)
 
+4b) customization
+===============================================================================
+you can change / remove the default prefix which is added to lines output by
+processes when using LogToBuffer:
+~/.vimrc:
+    let g:async = {'line_prefix' = "other : " }
+
+The line_prefix was chosen so that its easier to distinguish "input" from
+"output".
+
+The stdin input has no prefix so that editing behaves the way you know.
 
 5) usage tips:
 ==============================================================================

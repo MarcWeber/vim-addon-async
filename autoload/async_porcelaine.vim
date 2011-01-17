@@ -1,3 +1,5 @@
+if !exists('g:async') | let g:async = {} | endif | let s:c = g:async
+
 " only call receive after full line has been received
 " one line will be passed each time
 " usage see autoload/vim_addon_async_tests.vim
@@ -35,19 +37,14 @@ fun! async_porcelaine#LogToBuffer(ctx)
   sp | enew
   let ctx.bufnr = bufnr('%')
   let b:ctx = ctx
-  let prefix = '> '
-  let ctx.cmd_line_regex = '^'.prefix.'\zs.*\ze'
   let ctx.pending = "\n"
   " list of functions which will get data before it will be processed the
   " normal way. It must process the data it can handle and return 0 if it
   " wants more or the rest if its done and got too many characters
   let ctx.interceptors = []
   noremap <buffer> <c-c> :call b:ctx.kill('SIGINT')<cr>
-  exec 'noremap <buffer> o o'.prefix
-  exec 'noremap <buffer> O O'.prefix
-  exec 'inoremap <buffer> <cr> <cr>'.prefix
-  exec 'noremap <buffer> <space><cr> :call<space>b:ctx.send_command(async#GetLines('.string(ctx.cmd_line_regex).')."\n")<cr>'
-  exec 'inoremap <buffer> <space><cr> <esc>:call<space>b:ctx.send_command(async#GetLines('.string(ctx.cmd_line_regex).')."\n")<cr>'
+  exec 'noremap <buffer> <space><cr> :call<space>b:ctx.send_command(async#GetLines()."\n")<cr>'
+  exec 'inoremap <buffer> <space><cr> <esc>:call<space>b:ctx.send_command(async#GetLines()."\n")<cr>'
   vnoremap <buffer> <cr> y:call<space>b:ctx.send_command(getreg('"'))<cr>
 
   augroup VIM_ADDON_ASYNC_AUTO_KILL
@@ -105,8 +102,10 @@ fun! async_porcelaine#LogToBuffer(ctx)
         let lines = filter(lines, 'v:val !~'.string(self.regex_drop))
       endif
       
-      if has_key(self, 'line_prefix')
-        call map(lines, string(self.line_prefix).'.v:val')
+      let p = get(self, 'line_prefix', s:c.line_prefix)
+      if p != ''
+        " don't map first line
+        let lines = [lines[0]] + map(lines[1:], string(p).'.v:val')
       endif
       call async#ExecInBuffer(self.bufnr, function('async_porcelaine#AppendBuffer'), [lines, has_key(self, 'move_last')])
     " catch /.*/
@@ -133,10 +132,16 @@ fun! async_porcelaine#AppendBuffer(lines, moveLast)
   if append_last != ''
     call setline('$', getline('$').append_last)
   endif
+
   call append('$', a:lines[1:])
   if a:moveLast
     normal G
   endif
+
+  let b:async_input_start = line('$')+1
+
+  call vim_addon_signs#Push("async_input_start", [[bufnr('%'), b:async_input_start-1, 'async_input_start']] )
+
 endf
 
 fun! async_porcelaine#Receive(...) dict
@@ -298,7 +303,7 @@ fun! async_porcelaine#ScalaOmniComplete(findstart, base)
 
       let b:base = a:base
 
-      let line = matchstr(b:ctx.cmd_line_regex, b:bc)
+      let line = b:bc
       if line == ''
         let line = b:bc
       endif
