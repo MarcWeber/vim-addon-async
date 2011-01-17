@@ -96,7 +96,7 @@ fun! repl_python#PythonOmniComplete(findstart, base)
 
       let b:base = a:base
 
-      let line = matchstr(b:ctx.cmd_line_regex, b:bc)
+      let line = b:bc
       if line == ''
         let line = b:bc
       endif
