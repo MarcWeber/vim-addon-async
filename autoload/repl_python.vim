@@ -66,14 +66,14 @@ fun!  repl_python#HandlePythonCompletion2(data) dict
     let self.completions = []
     " this is evil again
     let self.res = eval(match[1])
-    for [type, name, doc, spec] in self.res
+    for [source, name, doc, spec, type] in self.res
       let open = ''
       if len(spec) > 0 && len(eval(spec[0])) > 0
-        let open = '('
-      elseif doc =~ '^[^(]\+(' && doc !~ '^int(x[, base])\|str(object) -> string'
+        let open = '(1'
+      elseif doc =~ '^[^ \t(]\+(' && doc !~ '^int(x[, base])\|str(object) -> string'
         let open = '('
       endif
-      call add(self.completions, {'word': name.open, 'menu': string(spec),'info': name.": ".string(spec)."\n".substitute(doc, '\\n', "\n",'g') })
+      call add(self.completions, {'word': name.open, 'menu': string(spec).' '.type,'info': name.": ".string(spec)."\n".substitute(doc, '\\n', "\n",'g') })
     endfor
     
     " restart completion

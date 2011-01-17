@@ -7,25 +7,30 @@ def func_info_x234(thing, completion_types):
       return '"%s"' % thing.replace('\\','\\\\').replace('"', '\\"').replace("\n", "\\n")
     else:
       return str(thing)
-  def toList(name, thing, type):
+  def toList(name, item, source):
       doc = "_"
       arity = 0
       spec = []
       try:
-        doc = thing.__doc__
+        doc = item.__doc__
       except Exception, e:
         doc = "-"
       try:
-        spec = inspect.getargspec(thing)
+        spec = inspect.getargspec(item)
         spec = [spec.args, spec.varargs, spec.keywords, spec.defaults.__str__()]
       except Exception, e:
         spec = []
-      return [type, name, doc, spec] 
+      type_ = "-"
+      try:
+        type_ = type(item)
+      except Exception, e:
+        type_ = "-"
+      return [source, name, doc, spec, str(type_)] 
   result = []
   if completion_types.__contains__("dict"):
     for d in thing.keys():
       result.append(toList(d, thing[d], 'key'))
   elif completion_types.__contains__("dir"):
     for d in dir(thing):
-      result.append(toList(d, getattr(thing,d), "dir"))
+      result.append(toList(d, getattr(thing, d), "dir"))
   return toVim(result)
