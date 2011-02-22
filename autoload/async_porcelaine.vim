@@ -1,5 +1,23 @@
 if !exists('g:async') | let g:async = {} | endif | let s:c = g:async
 
+fun! async_porcelaine#LoadHistory()
+  return filereadable(s:c.async_history_file)
+        \ ?  readfile(s:c.async_history_file)
+        \ : []
+endf
+
+fun! async_porcelaine#HistorySaveCmd(async_cmd, commandline)
+  let lines = [string([a:commandline, a:async_cmd])] + async_porcelaine#LoadHistory()[:s:c.async_history_length]
+  call writefile(lines, s:c.async_history_file)
+endf
+
+fun! async_porcelaine#CommandFromHistory()
+  let history = async_porcelaine#LoadHistory()
+  let item = tlib#input#List('si', 'select history line to be appended'
+        \, history)
+  call append('$', eval(history[item-1])[0])
+endf
+
 " only call receive after full line has been received
 " one line will be passed each time
 " usage see autoload/vim_addon_async_tests.vim
@@ -46,6 +64,8 @@ fun! async_porcelaine#LogToBuffer(ctx)
   exec 'noremap <buffer> <space><cr> :call<space>b:ctx.send_command(async#GetLines()."\n")<cr>'
   exec 'inoremap <buffer> <space><cr> <esc>:call<space>b:ctx.send_command(async#GetLines()."\n")<cr>'
   vnoremap <buffer> <cr> y:call<space>b:ctx.send_command(getreg('"'))<cr>
+  noremap <buffer> <c-h> :call async_porcelaine#CommandFromHistory()<cr>
+  inoremap <buffer> <c-h> <esc>:call async_porcelaine#CommandFromHistory()<cr>a
 
   augroup VIM_ADDON_ASYNC_AUTO_KILL
     autocmd BufWipeout <buffer> call b:ctx.kill()
@@ -65,6 +85,7 @@ fun! async_porcelaine#LogToBuffer(ctx)
   " }}}2
   
   fun! ctx.send_command(s)
+    call async_porcelaine#HistorySaveCmd(self.cmd, a:s)
     " force result appearing on a new line
     let self.pending = "\n"
     call self.write(a:s)

@@ -131,7 +131,7 @@ For now I recommend using impl 2) (gvim) or impl 1) (non gui version of Vim)
   impl 1 native):
   ================
       (out of order because API changed - current upstream of this patch is here
-      http://github.com/bartman/vim.git )
+      http://github.com/bartman/vim )
 
       compile my async version of Vim (github.com/MarcWeber/vim branch "work").
       (-) doesn't work in gui very well yet. That's why its not used in that case
@@ -182,6 +182,8 @@ create your own custom commands like this
   command! AsyncSML call repl_ruby#RubyBuffer({'cmd':'sml','move_last' : 1, 'prompt': '^- '})
   command! AsyncPython call repl_python#PythonBuffer({'cmd':'python -i','move_last' : 1, 'prompt': '^>>> '})
 
+A history has been implemented. Pres <c-h> to use select a line you've used
+previously. See plugin/vim-addon-async.vim for file location and max lines
 
 6) credits:
 ===============================================================================
