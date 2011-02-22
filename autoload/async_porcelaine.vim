@@ -1,22 +1,24 @@
 if !exists('g:async') | let g:async = {} | endif | let s:c = g:async
 
+" HISTORY implementation {{{1
 fun! async_porcelaine#LoadHistory()
   return filereadable(s:c.async_history_file)
-        \ ?  readfile(s:c.async_history_file)
+        \ ?  eval(readfile(s:c.async_history_file, 'b')[0])
         \ : []
 endf
 
 fun! async_porcelaine#HistorySaveCmd(async_cmd, commandline)
-  let lines = [string([a:commandline, a:async_cmd])] + async_porcelaine#LoadHistory()[:s:c.async_history_length]
-  call writefile(lines, s:c.async_history_file)
+  let lines = [[a:commandline, a:async_cmd]] + async_porcelaine#LoadHistory()[:s:c.async_history_length]
+  call writefile([string(lines)], s:c.async_history_file, 'b')
 endf
 
 fun! async_porcelaine#CommandFromHistory()
   let history = async_porcelaine#LoadHistory()
   let item = tlib#input#List('si', 'select history line to be appended'
-        \, history)
-  call append('$', eval(history[item-1])[0])
+        \, map(copy(history),"substitute(v:val[0], \"\\n\",'|','g').' cmd: '.(v:val[1])"))
+  call append('$', split(history[item-1][0],"\n"))
 endf
+" }}}
 
 " only call receive after full line has been received
 " one line will be passed each time
