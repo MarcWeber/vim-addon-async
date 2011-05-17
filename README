@@ -212,6 +212,9 @@ IMHO their only issue is that they block Vim if have long running tasks.
   Screen (vim + gnu screen/tmux) : Simulate a split shell, using gnu screen or tmux:
   http://www.vim.org/scripts/script.php?script_id=2711
 
+This was announced on the mailinglist (client-server without X):
+http://code.google.com/r/yukihironakadaira-vim-cmdsrv-nox/
+
 8) yet two another examples:
 ==============================================================================
 
