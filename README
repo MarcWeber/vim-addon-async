@@ -203,12 +203,19 @@ This would be another perfect match to provide a different implementation.
 
   vimproc plugin
   http://github.com/Shougo/vimproc/tree/master/doc/
+  - TODO: put more details here
 
   Conque Shell plugin:
   http://code.google.com/p/conque
-
-IMHO their only issue is that they block Vim if have long running tasks.
-
+  - looks like being a complete terminal emulator trying to map terminal
+    commands to Vim buffer?
+    Thus Conque can do much more than vim-addon-async. It can even run vim
+    inside gvim!
+  - must be in insert mode to receive screen updates
+  - probably more cross platform
+  - probably causing less crashes
+  - TODO: put more details here, read its documentation
+  
   Screen (vim + gnu screen/tmux) : Simulate a split shell, using gnu screen or tmux:
   http://www.vim.org/scripts/script.php?script_id=2711
 
