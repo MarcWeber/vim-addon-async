@@ -273,6 +273,13 @@ call append('$', string)
 
 10) TROUBLE?
 ==============================================================================
+
+MAC/OSX:
+The default vim does not support clientserver, :echo has('clienserver') returns 0.
+Thus you have to tell vim which vim to run to pass data by:
+  let g:async = {'vim' : 'path-to-your-macvim'}
+
+
 Currently only the 'impl 2' implementation is supported fully (see above). This means
 
   1)  :echo has('clienserver') must report 1
@@ -280,8 +287,6 @@ Currently only the 'impl 2' implementation is supported fully (see above). This 
   3)  You must have the c executable compiled (The plugin should try doing this for
       you though). Search for gcc above to learn how to compile it manually
 
-  On Mac (OSX) there are known issues. Buy me a Mac or fix it yourself -
-  shouldn't be too hard though ;)
   I recommend using a command like this for debugging:
 
   call async_porcelaine#LogToBuffer({'cmd':'/bin/sh -i', 'debug_process' : 1 }) 

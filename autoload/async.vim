@@ -7,6 +7,7 @@
 " defined in plugin file
 let s:async = g:async
 let s:async.cmd_max_chars = get(s:async, 'cmd_max_chars', 2000)
+let s:async.vim = get(s:async,'vim','vim')
 
 if !exists('s:sync.processes')
   let s:async.processes = {}
@@ -171,7 +172,7 @@ fun! async#Exec(ctx)
     let ctx.tmp_from_vim2 = tempname()
     let ctx.tmp_to_vim = tempname()
     " start background process
-    let cmd = s:async_helper_path.' vim '.join(map([v:servername, ctx.vim_process_id, ctx.tmp_from_vim, ctx.tmp_to_vim, s:async.cmd_max_chars, ctx.cmd], 'shellescape(v:val)'),' ')
+    let cmd = s:async_helper_path.' '. s:async.vim .' '.join(map([v:servername, ctx.vim_process_id, ctx.tmp_from_vim, ctx.tmp_to_vim, s:async.cmd_max_chars, ctx.cmd], 'shellescape(v:val)'),' ')
     let ctx['log-c_executable'] = tempname()
 
     if 0 || get(ctx,'debug_process', 0)
