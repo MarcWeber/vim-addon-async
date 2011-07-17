@@ -28,6 +28,9 @@
  * me improve it. But hey, it works!
  *
  * Qute some code was copied from vim source code
+ *
+ * I should never have started this helper app in C.
+ * TODO: rewrite using a sane scripting language (perl, ruby, pyhton, ..)
  */ 
 
 void usage(char * name){
@@ -218,6 +221,57 @@ void unquote(char * ptr, int buf_count, char * target, int * written){
    }
 }
 
+
+int vim_alive(char * vimExecutable, char * vimServerName){
+
+  char * argv3[6];
+  int pid3;
+  int pipe_error;
+  int fd_fromvim[2];
+  int ignored;
+
+  argv3[0] = vimExecutable;
+  argv3[1] = "--servername";
+  argv3[2] = vimServerName;
+  argv3[3] = "--remote-expr";
+  argv3[4] = "v:servername";
+  argv3[5] = NULL;
+
+  pipe_error = (pipe(fd_fromvim) < 0);
+  if (pipe_error){
+    printf("creating pipe failed\n");
+    return 0; // force exit
+  }
+
+  pid3 = fork();
+  if (pid3 == -1) {
+    printf("fork failed\n");
+    return 0;
+  } else if (pid3 == 0) { /* child */
+
+    close(fd_fromvim[0]);
+    close(1);
+    ignored = dup(fd_fromvim[1]);
+
+    execvp(vimExecutable, argv3);
+    exit(-1);
+  }
+  /* parent */
+  close(fd_fromvim[1]);
+#define BUFSIZE2 1024
+  char buf[BUFSIZE2];
+
+  int read_bytes2 = read(fd_fromvim[0], &buf[0], (BUFSIZE2-1));
+  buf[read_bytes2] = 0;
+
+  // kill vim if its still running ..
+  kill(pid3, SIGKILL);
+
+  // expect that vim printed the servername on stdout
+  return NULL != strstr(&buf[0], vimServerName);
+
+}
+
 int main(int argc, char * argv[])
 {
 
@@ -241,7 +295,8 @@ int main(int argc, char * argv[])
     int	fd_toshell[2];
     int fd_from;
     int fd_to;
-    int pid;
+    int pid_child = 0; // pid target process
+    int pidInut = 0; // process reading input from vim feeding it to target process
     int ignored;
 
 
@@ -258,12 +313,12 @@ int main(int argc, char * argv[])
     }
 
     // fork and close pipe ends
-    pid = fork();
-    if (pid == -1) {
+    pid_child = fork();
+    if (pid_child == -1) {
 	printf("fork failed\n");
 	goto error_fork;
 
-    } else if (pid == 0) { /* child */
+    } else if (pid_child == 0) { /* child */
 	simulate_dumb_terminal();
 
 	/* set up stdin for the child */
@@ -300,15 +355,14 @@ int main(int argc, char * argv[])
 
     // notify Vim about pid:
     char s_pid[10];
-    snprintf(&s_pid[0], sizeof(s_pid), "%d", pid);
+    snprintf(&s_pid[0], sizeof(s_pid), "%d", pid_child);
     send(vimExecutable, vimServerName, processId, "pid", s_pid, strlen(s_pid), toVim);
 
     // process watching for vim -> process input:
 
     // fork and close pipe ends
-    int pidInut;
     pidInut = fork();
-    if (pid == -1) {
+    if (pid_child == -1) {
 	printf("fork failed\n");
 	goto error_fork;
 
@@ -349,6 +403,7 @@ int main(int argc, char * argv[])
      int read_bytes;
      char buf[BUF_SIZE];
 
+     int vim_alive_counter = 100;
 
 
      while (1){
@@ -383,31 +438,47 @@ int main(int argc, char * argv[])
          // buf[20] = 0;
          // printf("read: %s\n", b_);
        }
+
+       if (vim_alive_counter-- == 0){
+         vim_alive_counter = 100;
+         // check that vim is still alive
+         //
+         if (!vim_alive(vimExecutable, vimServerName)){
+           printf(" ==================== vim has died? quitting\n");
+           goto terminate;
+         }
+       }
      }
 
     int status;
     int rc;
 terminate:
 
-   printf("waiting for termination\n");
-    if ( waitpid(pid, &status, WNOHANG) == 0 ) {
-        // comments see vim code
-        kill(pid, SIGTERM);
-        rc = waitpid(pid, &status, 0);
-    }
+   kill(pidInut, SIGKILL);
+   printf("%d child \n", pid_child);
+   kill(pid_child, SIGKILL);
 
-    char code[8];
-    snprintf(&code[0], sizeof(code), "%d", status);
-    send(vimExecutable, vimServerName, processId, "died", code, strlen(code), toVim);
+   printf("waiting for termination\n");
+   if ( waitpid(pid_child, &status, WNOHANG) == 0 ) {
+       // comments see vim code
+       kill(pid_child, SIGKILL);
+       rc = waitpid(pid_child, &status, 0);
+   }
+
+   char code[8];
+   snprintf(&code[0], sizeof(code), "%d", status);
+   send(vimExecutable, vimServerName, processId, "died", code, strlen(code), toVim);
 
 error_fork:
-     close(fd_toshell[0]);
-     close(fd_toshell[1]);
+   close(fd_toshell[0]);
+   close(fd_toshell[1]);
 error_pipe_to:
-     close(fd_fromshell[0]);
-     close(fd_fromshell[1]);
+   close(fd_fromshell[0]);
+   close(fd_fromshell[1]);
 error_pipe_from:
-     return;
+
+
+   return;
   }
 
 }
