@@ -176,7 +176,10 @@ The stdin input has no prefix so that editing behaves the way you know.
 ==============================================================================
 create your own custom commands like this
 
+  " AsyncSh only works in gvim. if you use vim it magically suspends? Probably
+  " some signals taking a wrong path (?)
   command! AsyncSh  call async_porcelaine#LogToBuffer({'cmd':'/bin/sh -i', 'move_last':1, 'prompt': '^.*\$[$] '})
+
   command! AsyncCoq call async_porcelaine#LogToBuffer({'cmd':'coqtop', 'move_last':1, 'prompt': '^Coq < '})
   command! AsyncRubyIrb call repl_ruby#RubyBuffer({'cmd':'irb','move_last' : 1})
   command! AsyncSML call repl_ruby#RubyBuffer({'cmd':'sml','move_last' : 1, 'prompt': '^- '})
