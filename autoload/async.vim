@@ -116,7 +116,7 @@ fun! async#Exec(ctx)
     if 0 && exists('*async_exec') && !has('gui_running')
       let impl = 'native'
     elseif has('clientserver') && v:servername != ''
-       if !executable(s:async_helper_path) && 'y' == input('compile c hepler application? [y] ','')
+       if !executable(s:async_helper_path) && 'y' == input('compile c helper application? [y] ','')
          exec '!gcc '.shellescape('-o').' '.shellescape(s:async_helper_path).' '.shellescape(s:async_helper_path.'.c')
          if v:shell_error != 0 | throw "compiling helper app failed" | endif
        endif
