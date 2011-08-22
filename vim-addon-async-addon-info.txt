@@ -5,7 +5,7 @@
   "maintainer" : "Marc Weber <marco-oweber@gmx.de>",
   "repository" : {"type": "git", "url": "git://github.com/MarcWeber/vim-addon-async.git"},
   "dependencies" : {
-    "vim-addon-signs": {},
+    "vim-addon-signs": {}
   },
   "description" : "async fetaures, repl implementations and completion (python, ruby, scala) ..."
 }
