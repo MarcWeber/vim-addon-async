@@ -225,6 +225,9 @@ This would be another perfect match to provide a different implementation.
 This was announced on the mailinglist (client-server without X):
 http://code.google.com/r/yukihironakadaira-vim-cmdsrv-nox/
 
+vim remote library:
+https://github.com/ynkdir/vim-remote
+
 8) yet two another examples:
 ==============================================================================
 

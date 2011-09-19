@@ -264,6 +264,8 @@ int vim_alive(char * vimExecutable, char * vimServerName){
   int read_bytes2 = read(fd_fromvim[0], &buf[0], (BUFSIZE2-1));
   buf[read_bytes2] = 0;
 
+  close(fd_fromvim[0]);
+
   // kill vim if its still running ..
   kill(pid3, SIGKILL);
 
