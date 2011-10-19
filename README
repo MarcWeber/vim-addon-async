@@ -41,6 +41,11 @@ REPL (read print eval loop) implementations are available for
     works: dict["    : list keys
            obj.      : list dir() output
            (nothing) : list globals
+could be done:
+  - PHP - There is lot's of introspection eg see http://docstore.mik.ua/orelly/webprog/php/ch06_05.htm, php -a runs the interpreter
+
+
+  
 providing completion on objects etc.
 
 [1]: the interpreter is used. eg dir(obj) for python and .methods for Ruby.
