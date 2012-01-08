@@ -113,7 +113,7 @@ fun! async#Exec(ctx)
   if impl == 'auto'
     " native is disabled because work branch is not up to date (argument order
     " changed)
-    if 0 && exists('*async_exec') && !has('gui_running')
+    if exists('*async_exec') && !has('gui_running')
       let impl = 'native'
     elseif has('clientserver') && v:servername != ''
        if !executable(s:async_helper_path) && 'y' == input('compile c helper application? [y] ','')
@@ -139,7 +139,7 @@ fun! async#Exec(ctx)
 
   let ctx.implementation = impl
 
-  " add missing functions to ctx depending no chosen implementation
+  " add missing functions to ctx depending to chosen implementation
   if impl == 'native' " native {{{2
 
     fun ctx.kill()
@@ -162,6 +162,13 @@ fun! async#Exec(ctx)
       endif
       unlet s:async.processes[self.vim_process_id]
     endf
+
+    if !has_key(ctx, 'started')
+      fun ctx.started()
+      endf
+    endif
+
+    call async_exec(ctx)
 
   elseif impl == 'c_executable' " c_executable {{{2
 
