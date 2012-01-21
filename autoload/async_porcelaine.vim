@@ -55,11 +55,18 @@ endf
 fun! async_porcelaine#LogToBuffer(ctx)
   let ctx = a:ctx
   let buf_name = get(ctx, 'buf_name', '')
+
+  let new_buf = "sp | exec ' new '.(buf_name == '' ? '' : ' '.fnameescape(buf_name))"
   if bufnr(buf_name) >= 0
     exec 'b '.bufnr(buf_name)
-    throw "buffer ".buf_name." already exists. Consider closing it (:bw!) and retry!"
+    if !has_key(b:ctx,'status')
+      throw "buffer ".buf_name." already exists and process is running. Stop it by ctrl-c, then retry!"
+    else
+      " reuse buf
+    endif
+  else
+    exec new_buf
   endif
-  sp | exec ' new '.(buf_name == '' ? '' : ' '.fnameescape(buf_name))
   let ctx.bufnr = bufnr('%')
   let b:ctx = ctx
   let ctx.pending = "\n"
@@ -147,7 +154,7 @@ fun! async_porcelaine#LogToBuffer(ctx)
   endf
   call async#Exec(ctx)
   if (has_key(ctx, 'log-c_executable'))
-    exec 'command -buffer AsyncCExecutablelog :sp '. ctx['log-c_executable']
+    exec 'command! -buffer AsyncCExecutablelog :sp '. ctx['log-c_executable']
   endif
   return ctx
 endf
