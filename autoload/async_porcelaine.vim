@@ -54,7 +54,12 @@ endf
 "   yes | { es(){ echo -n $1; sleep 1; }; while read f; do echo $f; es a; es b; es c; echo; done; }
 fun! async_porcelaine#LogToBuffer(ctx)
   let ctx = a:ctx
-  sp | enew
+  let buf_name = get(ctx, 'buf_name', '')
+  if bufnr(buf_name) >= 0
+    exec 'b '.bufnr(buf_name)
+    throw "buffer ".buf_name." already exists. Consider closing it (:bw!) and retry!"
+  endif
+  sp | exec ' new '.(buf_name == '' ? '' : ' '.fnameescape(buf_name))
   let ctx.bufnr = bufnr('%')
   let b:ctx = ctx
   let ctx.pending = "\n"
