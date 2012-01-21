@@ -57,7 +57,7 @@ fun! async_porcelaine#LogToBuffer(ctx)
   let buf_name = get(ctx, 'buf_name', '')
 
   let new_buf = "sp | exec ' new '.(buf_name == '' ? '' : ' '.fnameescape(buf_name))"
-  if bufnr(buf_name) >= 0
+  if buf_name != '' && bufnr(buf_name) >= 0
     exec 'b '.bufnr(buf_name)
     if !has_key(b:ctx,'status')
       throw "buffer ".buf_name." already exists and process is running. Stop it by ctrl-c, then retry!"
