@@ -2,7 +2,7 @@
 " python interpreter implementation {{{1
 
 " usage:
-" call repl_python#PythonBuffer({'cmd':'irb','move_last' : 1})
+" call repl_python#PythonBuffer({'cmd':'python','move_last' : 1})
 " provides python completion. Be careful. If you do foo.remove().<c-x><c-o> 
 " foo.remove() will be evaluated (multiple times!)
 "
@@ -125,7 +125,7 @@ fun! repl_python#PythonOmniComplete(findstart, base)
         let b:ctx.completion_types = ['dict']
         let b:ctx.thing = "globals()"
       endif
-      
+
       let b:ctx.py_compl = repl_python#CompletionFunc()
       call b:ctx.dataTillRegexMatchesLine(b:ctx.py_compl.pattern, funcref#Function(function('repl_python#HandlePythonCompletion'), {'self': b:ctx } ))
       call b:ctx.write(b:ctx.py_compl.py_code."\n"
