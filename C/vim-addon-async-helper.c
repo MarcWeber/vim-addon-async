@@ -52,11 +52,11 @@ simulate_dumb_terminal()
 # ifdef HAVE_SETENV
     char	envbuf[50];
     setenv("TERM", "dumb", 1);
-    sprintf((char *)envbuf, "%ld", Rows);
+    sprintf((char *)envbuf, "%d", Rows);
     setenv("ROWS", (char *)envbuf, 1);
-    sprintf((char *)envbuf, "%ld", Rows);
+    sprintf((char *)envbuf, "%d", Rows);
     setenv("LINES", (char *)envbuf, 1);
-    sprintf((char *)envbuf, "%ld", Columns);
+    sprintf((char *)envbuf, "%d", Columns);
     setenv("COLUMNS", (char *)envbuf, 1);
 # else
     static char	envbuf_Rows[20];

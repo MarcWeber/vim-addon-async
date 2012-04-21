@@ -54,6 +54,11 @@ endf
 "   yes | { es(){ echo -n $1; sleep 1; }; while read f; do echo $f; es a; es b; es c; echo; done; }
 fun! async_porcelaine#LogToBuffer(ctx)
   let ctx = a:ctx
+
+  if has_key(ctx, 'terminated')
+    let ctx.terminated_overwritten = ctx.terminated
+  endif
+
   let buf_name = get(ctx, 'buf_name', '')
 
   let new_buf = "sp | exec ' new '.(buf_name == '' ? '' : ' '.fnameescape(buf_name))"
@@ -82,7 +87,10 @@ fun! async_porcelaine#LogToBuffer(ctx)
   inoremap <buffer> <c-h> <esc>:call async_porcelaine#CommandFromHistory()<cr>a
 
   augroup VIM_ADDON_ASYNC_AUTO_KILL
-    autocmd BufWipeout <buffer> call b:ctx.kill()
+    " looks like this is not working because vim already hase dropped
+    " b:ctx.kill .. could be keeping global list .. and delete the one which
+    " is "missing" now ..
+    autocmd BufUnload <buffer> call b:ctx.kill()
   augroup end
 
   fun! ctx.started()
@@ -151,6 +159,9 @@ fun! async_porcelaine#LogToBuffer(ctx)
 
   fun! ctx.terminated()
     call async#ExecInBuffer(self.bufnr, function('async#AppendBuffer'), [ ["exit code: ". self.status], has_key(self, 'move_last')])
+    if has_key(self, 'terminated_overwritten')
+      call self.terminated_overwritten()
+    endif
   endf
   call async#Exec(ctx)
   if (has_key(ctx, 'log-c_executable'))

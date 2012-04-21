@@ -69,7 +69,7 @@ It looks like this:
     " now that we have the date the process is no longer needed:
     self.kill()
   endf
-  call async#Start(ctx)
+  call async#Exec(ctx)
   call ctx.write("date") " run date
 
 What's nice about this design? You can add your own state to the context easily.
@@ -350,4 +350,7 @@ correctly:
                                     receive function
 
 
+
+* some apps require a (pseudo) terminal, eg debugging ruby.
+This is a workaround: socat EXEC:ruby\ app.rb,pty,stderr -
 
