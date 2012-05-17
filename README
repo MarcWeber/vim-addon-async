@@ -33,6 +33,7 @@ TABLE OF CONTENTS:
 ===============================================================================
 - ensime (Scala server providing fast type checking and completion)
 - vim-addon-xdebug (xdebug implementation for Vim)
+- vim-addon-rdebug (simple ruby debugging using require "debug")
 
 REPL (read print eval loop) implementations are available for
   - Scala           http://mawercer.de/~marc/vim-addon-async-scala-repl.jpg
@@ -186,7 +187,9 @@ create your own custom commands like this
   command! AsyncSh  call async_porcelaine#LogToBuffer({'cmd':'/bin/sh -i', 'move_last':1, 'prompt': '^.*\$[$] '})
 
   command! AsyncCoq call async_porcelaine#LogToBuffer({'cmd':'coqtop', 'move_last':1, 'prompt': '^Coq < '})
+
   command! AsyncRubyIrb call repl_ruby#RubyBuffer({'cmd':'irb','move_last' : 1})
+
   command! AsyncSML call repl_ruby#RubyBuffer({'cmd':'sml','move_last' : 1, 'prompt': '^- '})
   command! AsyncPython call repl_python#PythonBuffer({'cmd':'python -i','move_last' : 1, 'prompt': '^>>> '})
 
@@ -229,6 +232,7 @@ This would be another perfect match to provide a different implementation.
 
 This was announced on the mailinglist (client-server without X):
 http://code.google.com/r/yukihironakadaira-vim-cmdsrv-nox/
+clone then hg update -C cmdsrv-nox works perfectly without X!
 
 vim remote library:
 https://github.com/ynkdir/vim-remote
@@ -285,11 +289,14 @@ call append('$', string)
 10) TROUBLE?
 ==============================================================================
 
-MAC/OSX:
-The default vim does not support clientserver, :echo has('clienserver') returns 0.
-Thus you have to tell vim which vim to run to pass data by:
-  let g:async = {'vim' : 'path-to-your-macvim'}
+MAC/OSX/Linux/...:
+If vim in PATH does not support client-server nothing will happen. You have to
+tell VAM which path to pass to the externel helper by putting this into your .vimrc:
 
+  let g:async = {'vim' : 'path-to-vim-executable-supporting-client-server'}
+
+On OSX it is likely to be macvim. You can achieve the same by symlinking
+macvim or vimx or whatsoever to vim.
 
 Currently only the 'impl 2' implementation is supported fully (see above). This means
 

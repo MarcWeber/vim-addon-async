@@ -71,6 +71,8 @@ fun! async_porcelaine#LogToBuffer(ctx)
     endif
   else
     exec new_buf
+    setlocal noswapfile
+    setlocal buftype=nofile
   endif
   let ctx.bufnr = bufnr('%')
   let b:ctx = ctx

@@ -21,6 +21,7 @@ TABLE OF CONTENTS:
 
 - ensime (Scala server providing fast type checking and completion)
 - vim-addon-xdebug (xdebug implementation for Vim)
+- vim-addon-rdebug (simple ruby debugging using require "debug")
 
 #### REPL (read print eval loop) implementations are available for
 
@@ -232,6 +233,7 @@ Simulate a split shell, using gnu screen or tmux
 
 This was announced on the mailinglist (client-server without X):
 http://code.google.com/r/yukihironakadaira-vim-cmdsrv-nox/
+clone then hg update -C cmdsrv-nox works perfectly without X!
 
 [Vim Remote Library](https://github.com/ynkdir/vim-remote)
 
@@ -288,14 +290,16 @@ call append('$', string)
 
 # 10) Troubleshooting
 
-### MAC/OSX
-
-The default vim does not support clientserver, :echo has('clienserver') returns 0.
-Thus you have to tell vim which vim to run to pass data by:
+### MAC/OSX/Linux/...:
+If vim in PATH does not support client-server nothing will happen. You have to
+tell VAM which path to pass to the externel helper by putting this into your .vimrc:
 
 ```VimL
-let g:async = {'vim' : 'path-to-your-macvim'}
+  let g:async = {'vim' : 'path-to-vim-executable-supporting-client-server'}
 ```
+
+On OSX it is likely to be macvim. You can achieve the same by symlinking
+macvim or vimx or whatsoever to vim.
 
 Currently only "Implementation 2" is fully supported (see above). This means
 
