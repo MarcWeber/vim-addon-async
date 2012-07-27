@@ -1,6 +1,6 @@
 fun! vim_addon_async_tests#TestLineBuffering()
   " tests that only full lines are passed to receive.
-  let ctx = {'cmd': 'for l in `seq 3`; do for j in `seq 2`; do echo -n $j; sleep 1; done; echo; done; echo "done - You should have seen \"got 12\" 3 times' }
+  let ctx = {'cmd': 'for l in `seq 3`; do for j in `seq 2`; do echo -n $j; sleep 1; done; echo; done; echo "done - You should have seen \"got 12\" 3 times"' }
   fun! ctx.receive(data, ...)
     call append('$', "got ".a:data)
   endf
@@ -17,6 +17,7 @@ fun! vim_addon_async_tests#Binary()
   let ctx =  {'zero_aware':1, 'cmd':'cat'}
   let ctx.data = s
   let ctx.pending = [""]
+  let ctx.aslines = 1
 
   let g:binary_test_ctx = ctx
 
@@ -36,7 +37,7 @@ fun! vim_addon_async_tests#Binary()
       let expected = self.data[self.nr]
       if got != expected
         let self.failures += 1
-        call feedkeys(":echoe 'error with nr " . ci ." got ".  char2nr(got) ." expected ". char2nr(expected) ."'\<cr>")
+        call feedkeys(":echoe 'error with nr " . i ." got ".  char2nr(got) ." expected ". char2nr(expected) ."'\<cr>")
       endif
       let self.nr += 1
 

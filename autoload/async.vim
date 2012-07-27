@@ -111,10 +111,10 @@ fun! async#Exec(ctx)
   " try finding supported implementation:
   let impl = get(ctx,'implementation', 'auto')
   if impl == 'auto'
-    " native is disabled because work branch is not up to date (argument order
-    " changed)
-    if 0 && exists('*async_exec') && !has('gui_running')
+    if exists('*async_exec') && !has('gui_running')
       let impl = 'native'
+    elseif vam#IsPluginInstalled('vim-async-beans')
+      let impl = 'async_beans'
     elseif has('clientserver') && v:servername != ''
        if !executable(s:async_helper_path) && 'y' == input('compile c helper application? [y] ','')
          exec '!gcc '.shellescape('-o').' '.shellescape(s:async_helper_path).' '.shellescape(s:async_helper_path.'.c')
@@ -139,7 +139,7 @@ fun! async#Exec(ctx)
 
   let ctx.implementation = impl
 
-  " add missing functions to ctx depending no chosen implementation
+  " add missing functions to ctx depending to chosen implementation
   if impl == 'native' " native {{{2
 
     fun ctx.kill()
@@ -162,6 +162,29 @@ fun! async#Exec(ctx)
       endif
       unlet s:async.processes[self.vim_process_id]
     endf
+
+    if !has_key(ctx, 'started')
+      fun ctx.started()
+      endf
+    endif
+
+    call async_exec(ctx)
+
+  elseif impl == 'async_beans'
+
+    fun! ctx.terminated()
+      if has_key(self,'terminated_user')
+        call self.terminated_user()
+      endif
+      unlet s:async.processes[self.vim_process_id]
+    endf
+
+    if !has_key(ctx, 'started')
+      fun ctx.started()
+      endf
+    endif
+
+    call abeans#exec(ctx)
 
   elseif impl == 'c_executable' " c_executable {{{2
 
