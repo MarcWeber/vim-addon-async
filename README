@@ -237,6 +237,14 @@ clone then hg update -C cmdsrv-nox works perfectly without X!
 vim remote library:
 https://github.com/ynkdir/vim-remote
 
+http://vim.wikia.com/wiki/Execute_external_programs_asynchronously_under_Windows
+
+Implementation based on netbeans protocol:
+https://github.com/jlc/vim-async-beans
+
+(using python thread and CursorHold event):
+https://github.com/troydm/shellasync.vim
+
 8) yet two another examples:
 ==============================================================================
 
