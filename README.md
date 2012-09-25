@@ -245,6 +245,8 @@ Implementation based on netbeans protocol:
 (using python thread and CursorHold event):
 [shellasync.vim](https://github.com/troydm/shellasync.vim)
 
+[conque repl](http://www.vim.org/scripts/script.php?script_id=4222)
+
 # 8) Yet Two Other Examples:
 
 ```VimL
