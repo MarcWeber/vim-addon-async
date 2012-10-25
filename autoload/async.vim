@@ -120,6 +120,20 @@ fun! async#Exec(ctx)
          exec '!gcc '.shellescape('-o').' '.shellescape(s:async_helper_path).' '.shellescape(s:async_helper_path.'.c')
          if v:shell_error != 0 | throw "compiling helper app failed" | endif
        endif
+
+
+      " let tmp = tempname()
+      " let cmd = 'vim -u NONE -U NONE -N  -c '. shellescape('call writefile([has("clientserver")],'.string(tmp).')').' -c'.shellescape('qa!')
+      " call system(cmd)
+
+       " gvim --help does not work on my system !gvim --help > file does ..
+       if s:async.vim !~ 'gvim' && system(s:async.vim.' --help') !~ '--servername'
+         let s:async.vim = 'gvim'
+       endif
+
+       " if system(s:async.vim.' --help') !~ '--servername'
+       "   throw g:async.vim'.' (g:async.vim) does not support --servername. Please set this global var to any path to a vim supporting it (eg gvim)'
+       " endif
       let impl = "c_executable"
     else
       "          failure condition                 message
