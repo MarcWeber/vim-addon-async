@@ -268,6 +268,10 @@ int vim_alive(char * vimExecutable, char * vimServerName){
 
   // kill vim if its still running ..
   kill(pid3, SIGKILL);
+  
+  int status;
+  if (waitpid(pid3, &status, 0) == -1)
+    printf("error waiting for check alive vim process !?\n");
 
   // expect that vim printed the servername on stdout
   return NULL != strstr(&buf[0], vimServerName);
