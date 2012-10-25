@@ -163,6 +163,7 @@ app run on Windows as well.. Any volunteers ?
  
 - python (also calling back into Vim cause its not threadsafe, but passing
   data to Python could be done easily)
+  (ZyX says threads may not work on arm, but processes might)
 
 # 4b) Customization
 

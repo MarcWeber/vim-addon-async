@@ -165,6 +165,7 @@ For now I recommend using impl 2) (gvim) or impl 1) (non gui version of Vim)
  
   - python (also calling back into Vim cause its not threadsafe, but passing
     data to Python could be done easily)
+    (ZyX says threads may not work on arm, but processes might)
 
 4b) customization
 ===============================================================================
