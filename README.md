@@ -214,6 +214,8 @@ Thanks to:
 Nico Raffo told me that he's been working on a idle timer like event for Vim.
 This would be another perfect match to provide a different implementation.
 
+http://www.vim.org/scripts/script.php?script_id=4336
+
 [vimproc plugin](http://github.com/Shougo/vimproc/tree/master/doc/)
 - TODO: put more details here
 

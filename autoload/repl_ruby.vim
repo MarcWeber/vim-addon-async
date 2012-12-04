@@ -1,5 +1,6 @@
-
 " ruby (irb) interpreter implementation {{{1
+let s:async = g:async
+let s:async.ruby_repl_complete_lhs = '<c-x><c-o>'
 
 " usage:
 " call repl_ruby#RubyBuffer({'cmd':'irb','move_last' : 1})
@@ -10,7 +11,7 @@
 fun! repl_ruby#RubyBuffer(...)
   let ctx = a:0 > 0 ? a:1 : {}
   call async_porcelaine#LogToBuffer(ctx)
-  call async#ExecInBuffer(ctx.bufnr, 'setlocal omnifunc=repl_ruby#RubyOmniComplete | setlocal completeopt=preview,menu,menuone')
+  call async#ExecInBuffer(ctx.bufnr, "call vim_addon_completion#InoremapCompletions(g:async, [{ 'setting_keys' : ['ruby_repl_complete_lhs'], 'fun': 'repl_ruby#RubyOmniComplete'}])")
   let ctx.marker = "RUBY_COMPLETION_ASSISTANCE_END"
 endf
 
