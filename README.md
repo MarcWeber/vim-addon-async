@@ -26,8 +26,11 @@ TABLE OF CONTENTS:
 #### REPL (read print eval loop) implementations are available for
 
 - **Scala**
-- **Ruby** [1] [screenshot](https://raw.github.com/MarcWeber/vim-addon-async/master/screen-shots/vim-addon-async-ruby-repl.png)
-- **Python** [1] [screenshot](https://raw.github.com/MarcWeber/vim-addon-async/master/screen-shots/vim-addon-async-python-repl.png)
+- **Ruby** [1] 
+  ![ruby-completion](https://raw.github.com/MarcWeber/vim-addon-async/master/screen-shots/vim-addon-async-ruby-repl.png)
+- **Python** [1] 
+  ![python-completion](https://raw.github.com/MarcWeber/vim-addon-async/master/screen-shots/vim-addon-async-python-repl.png)
+
 
     works: dict["    : list keys
            obj.      : list dir() output
