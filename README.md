@@ -28,9 +28,10 @@ TABLE OF CONTENTS:
 - **Scala**
 - **Ruby** [1] [screenshot](https://raw.github.com/MarcWeber/vim-addon-async/master/screen-shots/vim-addon-async-ruby-repl.png)
 - **Python** [1] [screenshot](https://raw.github.com/MarcWeber/vim-addon-async/master/screen-shots/vim-addon-async-python-repl.png)
-  works: dict["    : list keys
-         obj.      : list dir() output
-         (nothing) : list globals
+
+    works: dict["    : list keys
+           obj.      : list dir() output
+           (nothing) : list globals
 
 could be done:
 
