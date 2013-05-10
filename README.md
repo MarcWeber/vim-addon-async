@@ -197,6 +197,8 @@ command! AsyncCoq call async_porcelaine#LogToBuffer({'cmd':'coqtop', 'move_last'
 command! AsyncRubyIrb call repl_ruby#RubyBuffer({'cmd':'irb','move_last' : 1})
 command! AsyncSML call repl_ruby#RubyBuffer({'cmd':'sml','move_last' : 1, 'prompt': '^- '})
 command! AsyncPython call repl_python#PythonBuffer({'cmd':'python -i','move_last' : 1, 'prompt': '^>>> '})
+command! AsyncScala call async_porcelaine#ScalaBuffer({'cmd':'scala','move_last' : 1, 'prompt': '^scala> '})
+
 ```
 
 A history has been implemented. Pres ```<c-h>``` to use select a line you've used
