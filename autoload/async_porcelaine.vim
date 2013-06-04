@@ -393,4 +393,14 @@ fun! async_porcelaine#ScalaOmniComplete(findstart, base)
 endf
 " }}}
 
+fun! async_porcelaine#MakeOrGrep(cmd)
+  let ctx = {'cmd': a:cmd , 'move_last':0, 'buf_name': '__GREP__MAKE__', 'line_prefix': ''}
+  fun ctx.terminated()
+    exec 'cbuffer '. self.bufnr
+    bw! __GREP__MAKE__
+  endf
+  call async_porcelaine#LogToBuffer(ctx)
+endf
+
+
 " vim:fdm=marker
