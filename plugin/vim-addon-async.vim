@@ -21,6 +21,6 @@ sign define async_input_start text=_ linehl=
 
 
 " I'm not quite happy yet - too much delay.
-command! AsyncGrepR  call async_porcelaine#MakeOrGrep('grep -nr '.shellescape(input('word: ')).' .')
-command! AsyncGrepRI call async_porcelaine#MakeOrGrep('grep -nr '.shellescape(input('word: ')).' .')
+command! AsyncGrepR  call async_porcelaine#MakeOrGrep('grep -nr -- '.shellescape(input('word: ')).' .')
+command! AsyncGrepRI call async_porcelaine#MakeOrGrep('grep -nir -- '.shellescape(input('word: ')).' .')
 command! AsyncMake call async_porcelaine#MakeOrGrep(input('cmd: ', 'make '))
