@@ -155,6 +155,7 @@ fun! async_porcelaine#LogToBuffer(ctx)
       call async#ExecInBuffer(self.bufnr, function('async_porcelaine#AppendBuffer'), [lines, has_key(self, 'move_last')])
     " catch /.*/
     "  call append('$',v:exception)
+    "  call append('$',v:throwpoint)
     " endtry
   endf
   " }}}

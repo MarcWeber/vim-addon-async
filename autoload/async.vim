@@ -288,6 +288,7 @@ fun! async#Receive(processId, message, ...)
     call async#ReceiveNoTry(a:processId, a:message, data)
   catch /.*/
     call append('$', v:exception)
+    call append('$', v:throwpoint)
   endtry
 endf
 
@@ -360,6 +361,7 @@ fun! async#RunDelayedActions()
           endif
         catch /.*/
           echoe "exception while running delayed action :".v:exception
+          echoe v:throwpoint
         endtry
       else
         break
