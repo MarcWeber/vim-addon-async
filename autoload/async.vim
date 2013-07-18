@@ -84,7 +84,8 @@ endf
 
 " implementation {{{ 1
 
-let s:async_helper_path = fnamemodify(expand('<sfile>'),':h:h').'/C/vim-addon-async-helper'
+let s:plugin_path = fnamemodify(expand('<sfile>'),':h:h')
+let s:async_helper_path = s:plugin_path.'/C/vim-addon-async-helper'
 
 fun! async#List()
   " native implementation also keeps track of a list (func async_list)
@@ -109,7 +110,7 @@ fun! async#Exec(ctx)
   let s:async.processes[ctx.vim_process_id] = ctx
 
   " try finding supported implementation:
-  let impl = get(ctx,'implementation', 'auto')
+  let impl = get(ctx,'implementation', g:async_implementation)
   if impl == 'auto'
     if exists('*async_exec') && !has('gui_running')
       let impl = 'native'
@@ -200,7 +201,7 @@ fun! async#Exec(ctx)
 
     call abeans#exec(ctx)
 
-  elseif impl == 'c_executable' " c_executable {{{2
+  elseif impl == 'c_executable' || impl == "ruby_executable" " c_executable {{{2
 
     " input_file2 will be moved to input_file
     " stdout_file is used to pass data back to Vim after async#Receive
@@ -209,7 +210,9 @@ fun! async#Exec(ctx)
     let ctx.tmp_from_vim2 = tempname()
     let ctx.tmp_to_vim = tempname()
     " start background process
-    let cmd = s:async_helper_path.' '. s:async.vim .' '.join(map([v:servername, ctx.vim_process_id, ctx.tmp_from_vim, ctx.tmp_to_vim, s:async.cmd_max_chars, ctx.cmd], 'shellescape(v:val)'),' ')
+
+    let async_helper_path = impl == 'c_executable' ? s:async_helper_path : 'ruby '.s:plugin_path.'/C/async_helper.rb'
+    let cmd = async_helper_path.' '. s:async.vim .' '.join(map([v:servername, ctx.vim_process_id, ctx.tmp_from_vim, ctx.tmp_to_vim, s:async.cmd_max_chars, ctx.cmd], 'shellescape(v:val)'),' ')
     let ctx['log-c_executable'] = tempname()
 
     if 0 || get(ctx,'debug_process', 0)
