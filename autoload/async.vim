@@ -14,11 +14,6 @@ if !exists('s:sync.processes')
   let s:vim_process_id = 1
 endif
 
-" preferred async implementation. See README
-if !exists('g:async_implementation')
-  let g:async_implementation = 'auto'
-endif
-
 let s:impl = {'supported': 'no'}
 
 " tool {{{ 1
@@ -110,7 +105,7 @@ fun! async#Exec(ctx)
   let s:async.processes[ctx.vim_process_id] = ctx
 
   " try finding supported implementation:
-  let impl = get(ctx,'implementation', g:async_implementation)
+  let impl = get(ctx,'implementation', s:async.implementation)
   if impl == 'auto'
     if exists('*async_exec') && !has('gui_running')
       let impl = 'native'

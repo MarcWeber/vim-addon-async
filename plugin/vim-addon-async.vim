@@ -1,5 +1,6 @@
 if !exists('g:async') | let g:async = {} | endif | let s:c = g:async
 let s:c.line_prefix = get(s:c,'line_prefix', '> ')
+let s:c.implementation = get(s:c,'implementation', 'auto')
 
 " shell like history file:
 let s:c.async_history_file = get(s:c,'async_history_file',expand('~/.vim-addon-async-history'))
