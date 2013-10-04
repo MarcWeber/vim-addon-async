@@ -8,11 +8,12 @@ function echo_completions($thing){
   }
   elseif (is_object($thing)){
     foreach (get_object_vars($thing) as $key => $object_var) {
-      $results[] = array('name' => $key, 'description' => 'obj var');
+      $results[] = array('name' => '->'.$key, 'description' => 'obj var');
     }
 
     $r = new ReflectionClass($thing);
     if ($r){
+
       if (is_array($async_r->getConstants))
         foreach ($async_r->getConstants as $c => $value) {
           $results[] = array('name' => $c, 'description' => 'constant = '.$value);
@@ -25,6 +26,16 @@ function echo_completions($thing){
             'description' => 'class : '.$method->class
           );
         }
+     }
+
+    $r = new ReflectionObject($thing);
+    if ($r){
+
+      if (is_array($r->getProperties()))
+        foreach ($r->getProperties() as $value) {
+          $results[] = array('name' => '->'.$value->name, 'description' => 'instance property of '.$value->class);
+        }
+
      }
   }
   echo 'COMPLETION:'.json_encode($results)."\n";

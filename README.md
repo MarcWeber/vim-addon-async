@@ -30,7 +30,7 @@ TABLE OF CONTENTS:
   ![ruby-completion](https://raw.github.com/MarcWeber/vim-addon-async/master/screen-shots/vim-addon-async-ruby-repl.png)
 - **PHP**
     works: $arr_var    : list keys, [ is prefixed
-           obj      : list methods, -> is prefixed
+           obj      : list methods,properties -> is prefixed
 
 - **Python** [1] 
   ![python-completion](https://raw.github.com/MarcWeber/vim-addon-async/master/screen-shots/vim-addon-async-python-repl.png)

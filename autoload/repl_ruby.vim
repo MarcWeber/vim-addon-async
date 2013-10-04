@@ -19,10 +19,6 @@ fun! s:Match(s)
   return a:s =~ b:base || ( b:additional_regex != '' && a:s =~ b:additional_regex)
 endf
 
-fun! s:DropBad(list)
-  call filter(a:list, 'v:val !~ "scala>" && v:val != "" && v:val != "NEXT_NEXT_NEXT" && v:val !~ '. string(''))
-endf
-
 let s:wait  = "please wait"
 
 " let g:ruby_prompt = '\%((rdb:\d\+) \|irb([^)]*):\d\+:\d\+>\)'
