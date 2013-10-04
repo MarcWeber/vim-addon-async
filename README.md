@@ -28,6 +28,10 @@ TABLE OF CONTENTS:
 - **Scala**
 - **Ruby** [1] 
   ![ruby-completion](https://raw.github.com/MarcWeber/vim-addon-async/master/screen-shots/vim-addon-async-ruby-repl.png)
+- **PHP**
+    works: $arr_var    : list keys, [ is prefixed
+           obj      : list methods, -> is prefixed
+
 - **Python** [1] 
   ![python-completion](https://raw.github.com/MarcWeber/vim-addon-async/master/screen-shots/vim-addon-async-python-repl.png)
 
@@ -195,6 +199,7 @@ command! AsyncSh  call async_porcelaine#LogToBuffer({'cmd':'/bin/sh -i', 'move_l
 
 command! AsyncCoq call async_porcelaine#LogToBuffer({'cmd':'coqtop', 'move_last':1, 'prompt': '^Coq < '})
 command! AsyncRubyIrb call repl_ruby#RubyBuffer({'cmd':'irb','move_last' : 1})
+command! AsyncPHP call repl_php#PHPBuffer({'cmd':'php -a','move_last' : 1})
 command! AsyncSML call repl_ruby#RubyBuffer({'cmd':'sml','move_last' : 1, 'prompt': '^- '})
 command! AsyncPython call repl_python#PythonBuffer({'cmd':'python -i','move_last' : 1, 'prompt': '^>>> '})
 command! AsyncScala call async_porcelaine#ScalaBuffer({'cmd':'scala','move_last' : 1, 'prompt': '^scala> '})

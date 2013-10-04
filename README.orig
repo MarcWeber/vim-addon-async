@@ -33,24 +33,14 @@ TABLE OF CONTENTS:
 ===============================================================================
 - ensime (Scala server providing fast type checking and completion)
 - vim-addon-xdebug (xdebug implementation for Vim)
-- vim-addon-rdebug (simple ruby debugging using require "debug")
 
 REPL (read print eval loop) implementations are available for
   - Scala           http://mawercer.de/~marc/vim-addon-async-scala-repl.jpg
   - Ruby [1]        http://mawercer.de/~marc/vim-addon-async-irb-repl.jpg
-    works: $arr_var    : list keys, [ is prefixed
-           obj      : list methods, -> is prefixed
-
-
   - Python [1]      http://mawercer.de/~marc/vim-addon-async-python-repl.jpg
     works: dict["    : list keys
            obj.      : list dir() output
            (nothing) : list globals
-could be done:
-  - PHP - There is lot's of introspection eg see http://docstore.mik.ua/orelly/webprog/php/ch06_05.htm, php -a runs the interpreter
-
-
-  
 providing completion on objects etc.
 
 [1]: the interpreter is used. eg dir(obj) for python and .methods for Ruby.
@@ -74,7 +64,7 @@ It looks like this:
     " now that we have the date the process is no longer needed:
     self.kill()
   endf
-  call async#Exec(ctx)
+  call async#Start(ctx)
   call ctx.write("date") " run date
 
 What's nice about this design? You can add your own state to the context easily.
@@ -169,7 +159,6 @@ For now I recommend using impl 2) (gvim) or impl 1) (non gui version of Vim)
  
   - python (also calling back into Vim cause its not threadsafe, but passing
     data to Python could be done easily)
-    (ZyX says threads may not work on arm, but processes might)
 
 4b) customization
 ===============================================================================
@@ -187,18 +176,11 @@ The stdin input has no prefix so that editing behaves the way you know.
 ==============================================================================
 create your own custom commands like this
 
-  " AsyncSh only works in gvim. if you use vim it magically suspends? Probably
-  " some signals taking a wrong path (?)
   command! AsyncSh  call async_porcelaine#LogToBuffer({'cmd':'/bin/sh -i', 'move_last':1, 'prompt': '^.*\$[$] '})
-
   command! AsyncCoq call async_porcelaine#LogToBuffer({'cmd':'coqtop', 'move_last':1, 'prompt': '^Coq < '})
-
   command! AsyncRubyIrb call repl_ruby#RubyBuffer({'cmd':'irb','move_last' : 1})
-  command! AsyncPHP call repl_php#PHPBuffer({'cmd':'php -a','move_last' : 1})
-
   command! AsyncSML call repl_ruby#RubyBuffer({'cmd':'sml','move_last' : 1, 'prompt': '^- '})
   command! AsyncPython call repl_python#PythonBuffer({'cmd':'python -i','move_last' : 1, 'prompt': '^>>> '})
-  command! AsyncScala call async_porcelaine#ScalaBuffer({'cmd':'scala','move_last' : 1, 'prompt': '^scala> '})
 
 A history has been implemented. Pres <c-h> to use select a line you've used
 previously. See plugin/vim-addon-async.vim for file location and max lines
@@ -219,42 +201,25 @@ Thanks to:
 Nico Raffo told me that he's been working on a idle timer like event for Vim.
 This would be another perfect match to provide a different implementation.
 
-  http://www.vim.org/scripts/script.php?script_id=4336
-
   vimproc plugin
   http://github.com/Shougo/vimproc/tree/master/doc/
-  - TODO: put more details here
 
   Conque Shell plugin:
   http://code.google.com/p/conque
-  - looks like being a complete terminal emulator trying to map terminal
-    commands to Vim buffer?
-    Thus Conque can do much more than vim-addon-async. It can even run vim
-    inside gvim!
-  - must be in insert mode to receive screen updates
-  - probably more cross platform
-  - probably causing less crashes
-  - TODO: put more details here, read its documentation
-  
+
+IMHO their only issue is that they block Vim if have long running tasks.
+
   Screen (vim + gnu screen/tmux) : Simulate a split shell, using gnu screen or tmux:
   http://www.vim.org/scripts/script.php?script_id=2711
 
+<<<<<<< HEAD
 This was announced on the mailinglist (client-server without X):
 http://code.google.com/r/yukihironakadaira-vim-cmdsrv-nox/
-clone then hg update -C cmdsrv-nox works perfectly without X!
+=======
 
-vim remote library:
-https://github.com/ynkdir/vim-remote
-
-http://vim.wikia.com/wiki/Execute_external_programs_asynchronously_under_Windows
-
-Implementation based on netbeans protocol:
-https://github.com/jlc/vim-async-beans
-
-(using python thread and CursorHold event):
-https://github.com/troydm/shellasync.vim
-
-[conque repl](http://www.vim.org/scripts/script.php?script_id=4222)
+For Python you may want to use this alternative:
+  http://www.vim.org/account/profile.php?user_id=27766
+>>>>>>> 31af1a7... related work: python alternative
 
 8) yet two another examples:
 ==============================================================================
@@ -307,16 +272,6 @@ call append('$', string)
 
 10) TROUBLE?
 ==============================================================================
-
-MAC/OSX/Linux/...:
-If vim in PATH does not support client-server nothing will happen. You have to
-tell VAM which path to pass to the externel helper by putting this into your .vimrc:
-
-  let g:async = {'vim' : 'path-to-vim-executable-supporting-client-server'}
-
-On OSX it is likely to be macvim. You can achieve the same by symlinking
-macvim or vimx or whatsoever to vim.
-
 Currently only the 'impl 2' implementation is supported fully (see above). This means
 
   1)  :echo has('clienserver') must report 1
@@ -324,6 +279,8 @@ Currently only the 'impl 2' implementation is supported fully (see above). This 
   3)  You must have the c executable compiled (The plugin should try doing this for
       you though). Search for gcc above to learn how to compile it manually
 
+  On Mac (OSX) there are known issues. Buy me a Mac or fix it yourself -
+  shouldn't be too hard though ;)
   I recommend using a command like this for debugging:
 
   call async_porcelaine#LogToBuffer({'cmd':'/bin/sh -i', 'debug_process' : 1 }) 
@@ -376,7 +333,4 @@ correctly:
                                     receive function
 
 
-
-* some apps require a (pseudo) terminal, eg debugging ruby.
-This is a workaround: socat EXEC:ruby\ app.rb,pty,stderr -
 
