@@ -261,6 +261,8 @@ Implementation based on netbeans protocol:
 
 [conque repl](http://www.vim.org/scripts/script.php?script_id=4222)
 
+[vim-dispatch](https://github.com/tpope/vim-dispatch)
+
 # 8) Yet Two Other Examples:
 
 ```VimL
