@@ -280,7 +280,6 @@ fun! async#Receive(processId, message, ...)
     let content = readfile(ctx.tmp_to_vim,'b')[0]
     let data = eval(content)
     call delete(ctx.tmp_to_vim)
-  else
   endif
   try
     call async#ReceiveNoTry(a:processId, a:message, data)

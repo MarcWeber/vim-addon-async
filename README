@@ -1,6 +1,8 @@
 TABLE OF CONTENTS:
 ====================
 
+!! TODO: implement nvims job_control.txt
+
 
     1) list of plugins using vim-addon-async (SCREENSHOTS!)
 
@@ -38,7 +40,6 @@ TABLE OF CONTENTS:
 REPL (read print eval loop) implementations are available for
   - Scala           http://mawercer.de/~marc/vim-addon-async-scala-repl.jpg
   - Ruby [1]        http://mawercer.de/~marc/vim-addon-async-irb-repl.jpg
-
   - Python [1]      http://mawercer.de/~marc/vim-addon-async-python-repl.jpg
     works: dict["    : list keys
            obj.      : list dir() output

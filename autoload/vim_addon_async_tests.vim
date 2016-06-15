@@ -4,6 +4,11 @@ fun! vim_addon_async_tests#TestLineBuffering()
   fun! ctx.receive(data, ...)
     call append('$', "got ".a:data)
   endf
+  fun ctx.started()
+  endf
+  fun ctx.terminated()
+  endf
+
   call async_porcelaine#LineBuffering(ctx)
   call async#Exec(ctx)
 endf
@@ -19,10 +24,16 @@ fun! vim_addon_async_tests#Binary()
   let ctx.pending = [""]
   let ctx.aslines = 1
 
+  fun ctx.started()
+  endf
+  fun ctx.terminated()
+  endf
+
   let g:binary_test_ctx = ctx
 
   let ctx.nr = 0
   let ctx.failures = 0
+  let ctx.got_data = ''
 
   fun ctx.receive_debug(data) abort
     if type(a:data) != type([])
@@ -31,26 +42,31 @@ fun! vim_addon_async_tests#Binary()
     if a:data[0] != ''
       call feedkeys(":echoe 'wrong thing'\<cr>")
     endif
-    let data = a:data[1]
-    for i in range(0,len(data)-1)
-      let got = data[i]
-      let expected = self.data[self.nr]
-      if got != expected
-        let self.failures += 1
-        call feedkeys(":echoe 'error with nr " . i ." got ".  char2nr(got) ." expected ". char2nr(expected) ."'\<cr>")
-      endif
-      let self.nr += 1
+    if (len(a:data) > 1)
+      let data = a:data[1]
+      let self.got_data .= a:data[1]
+      for i in range(0,len(data)-1)
+        let got = data[i]
+        let expected = self.data[self.nr]
+        if got != expected
+          let self.failures += 1
+          call feedkeys(":echoe 'error with nr " . i ." got ".  char2nr(got) ." expected ". char2nr(expected) ."'\<cr>")
+        endif
+        let self.nr += 1
 
-      if self.nr >= len(self.data)
-        call feedkeys(":echoe 'end. you should have seen no additional errors. errors: ". self.failures ." '\<cr>")
-        call self.kill()
-      endif
-    endfor
+        if self.nr >= len(self.data)
+          call feedkeys(":echoe 'end. you should have seen no additional errors. errors: ". self.failures ." '\<cr>")
+          call self.kill()
+        endif
+      endfor
+    endif
   endf
 
   fun ctx.receive(data, ...)
     call self.receive_debug(a:data)
   endf
+  " let ctx.debug_process = 1
+  let g:ctx = ctx
 
   call async#Exec(ctx)
   call ctx.write(['', ctx.data])
@@ -71,6 +87,11 @@ fun! vim_addon_async_tests#Chunksize(max)
       call feedkeys(":echoe 'success'\<cr>")
       call self.kill()
     endif
+  endf
+
+  fun ctx.started()
+  endf
+  fun ctx.terminated()
   endf
 
   call async#Exec(ctx)

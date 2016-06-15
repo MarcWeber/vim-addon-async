@@ -1,6 +1,7 @@
 TABLE OF CONTENTS:
 ====================
 
+!! TODO: implement nvims job_control.txt
 
 1. list of plugins using vim-addon-async (SCREENSHOTS!)
 2. GOAL (provide API for Vim users)

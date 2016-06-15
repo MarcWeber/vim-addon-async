@@ -133,7 +133,8 @@ fun! async_porcelaine#LogToBuffer(ctx)
       " write the "p" to the last line, but remember that there was no trailing
       " \n by assigning it to pending.
 
-      let lines = split(get(self,'pending','').a:text, '[\r\n]\+', 1)
+      " this version is terrific slow let lines = split(get(self,'pending','').a:text, '[\r\n]\+', 1)
+      let lines = split(substitute( get(self,'pending','').a:text, "\r", "\n", 'g'), '\n', 1)
       silent! unlet self.pending
       if lines[-1] == '' || (has_key(self, 'prompt') && lines[-1] =~ self.prompt)
         " force adding \n when reply arrives after user has typed prompt
