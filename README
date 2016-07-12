@@ -236,9 +236,11 @@ This would be another perfect match to provide a different implementation.
   - probably more cross platform
   - probably causing less crashes
   - TODO: put more details here, read its documentation
-  
+  - neovim
+
   Screen (vim + gnu screen/tmux) : Simulate a split shell, using gnu screen or tmux:
   http://www.vim.org/scripts/script.php?script_id=2711
+
 
 This was announced on the mailinglist (client-server without X):
 http://code.google.com/r/yukihironakadaira-vim-cmdsrv-nox/

@@ -241,6 +241,7 @@ http://www.vim.org/scripts/script.php?script_id=4336
 - probably more cross platform
 - probably causing less crashes
 - TODO: put more details here, read its documentation
+- Neovim
 
 [Screen (vim + gnu screen/tmux)](http://www.vim.org/scripts/script.php?script_id=2711)
 
