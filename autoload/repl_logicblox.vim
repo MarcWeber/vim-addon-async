@@ -17,8 +17,17 @@ fun! repl_logicblox#LogicbloxBuffer(...)
   let ctx.prompt = get(ctx, 'prompt', s:prompt)
   let ctx.cmd = get(ctx, 'cmd', 'socat exec:lb,pty -')
 
+  fun ctx.ensure_trailing_dot(lines)
+    let lines = a:lines
+    if (lines !~ '\.$')
+      echom 'warning: adding missing .'
+      let lines .= '.'
+    endif
+    return lines
+  endf
+
   fun ctx.exec(lines)
-    return self.send_command("exec '".a:lines."'\n")
+    return self.send_command("exec '". self.ensure_trailing_dot(a:lines)."'\n")
   endf
 
   fun ctx.query(lines)
@@ -26,7 +35,7 @@ fun! repl_logicblox#LogicbloxBuffer(...)
   endf
 
   fun ctx.addblock(lines)
-    return self.send_command("addblock '".a:lines."'\n")
+    return self.send_command("addblock '". self.ensure_trailing_dot(a:lines) ."'\n")
   endf
 
   call async_porcelaine#LogToBuffer(ctx)
@@ -34,7 +43,7 @@ fun! repl_logicblox#LogicbloxBuffer(...)
   let ctx.marker = "RUBY_COMPLETION_ASSISTANCE_END"
 
   vnoremap <buffer> e y:call<space>b:ctx.exec(getreg('"'))<cr>
-  vnoremap <buffer> b y:call<space>b:ctx.block(getreg('"'))<cr>
+  vnoremap <buffer> b y:call<space>b:ctx.addblock(getreg('"'))<cr>
   vnoremap <buffer> q y:call<space>b:ctx.query(getreg('"'))<cr>
   inoremap <buffer> <expr> <c-x><c-o> vim_addon_completion#CompleteUsing('repl_logicblox#LogicbloxComplete')
 endf
@@ -99,13 +108,14 @@ fun! repl_logicblox#HandleCompletion(data) dict
     if (b:ctx.completion_stack[0] == 'add_workspaces')
       for [k,v] in items(add_workspaces_on_regex)
         if b:match_text =~ k
-          let b:ctx.completions += map(lines, '{"word": '.string(v).'.v:val}')
+          let b:ctx.completions += map(lines[1:], '{"word": '.string(v).'.v:val}')
         endif
       endfor
     elseif (b:ctx.completion_stack[0] == 'lbi')
       let b:ctx.completions = map(lines, '{"word": v:val}')
     elseif (b:ctx.completion_stack[0] == 'lb')
       let b:ctx.completions = repl_logicblox#LBHelpToCompletion(lines)
+      call add(b:ctx.completions, {"word" : "create --unique", 'menu' : 'create with unique name'})
       for [k,v] in items(add_workspaces_on_regex)
         if b:match_text =~ k
           let b:ctx.completion_stack = ['add_workspaces']
