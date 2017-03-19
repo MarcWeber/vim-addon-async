@@ -110,8 +110,11 @@ fun! async_porcelaine#LogToBuffer(ctx)
   endf
   " }}}2
   
-  fun! ctx.send_command(s)
-    call async_porcelaine#HistorySaveCmd(self.cmd, a:s)
+  fun! ctx.send_command(s, ...)
+    let opts = a:0 > 0 ? a:1 : {}
+    if get(opts, 'add_history', 1)
+      call async_porcelaine#HistorySaveCmd(self.cmd, a:s)
+    endif
     " force result appearing on a new line
     let self.pending = "\n"
     call self.write(a:s)
@@ -357,7 +360,8 @@ fun! async_porcelaine#HistoryComplete(findstart, base)
     let completions = []
     for x in history
       if x[0] =~ '^'.line
-        call add(completions, {'word': substitute(substitute(x[0], nr2char(10).'$', '', ''), nr2char(10), "\n", 'g'), 'menu': x[1] })
+        let cmd = substitute(substitute(x[0], nr2char(10).'$', '', ''))
+        call add(completions, {'word': cmd, nr2char(10), "\n", 'g'), 'abbr': len(cmd) > 80 ? cmd[0:80].'...' : cmd, 'info' : cmd, 'menu': x[1] })
       endif
     endfor
     return completions

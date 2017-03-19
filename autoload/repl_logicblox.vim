@@ -8,7 +8,7 @@
 "
 " [2]: TODO arity and documentation !? http://stackoverflow.com/questions/990016/how-to-find-out-the-arity-of-a-method-in-python
 
-let s:prompt = 'lb\%(i\)\?[ ]\?.*> '
+let s:prompt = 'lb\%(i\)\?[ ]\?.\{-}> '
 
 " You can also run /bin/sh and use require 'debug' in your ruby scripts
 fun! repl_logicblox#LogicbloxBuffer(...)
@@ -23,19 +23,22 @@ fun! repl_logicblox#LogicbloxBuffer(...)
       echom 'warning: adding missing .'
       let lines .= '.'
     endif
-    return lines
+    return lines."\n"
   endf
 
   fun ctx.exec(lines)
-    return self.send_command("exec '". self.ensure_trailing_dot(a:lines)."'\n")
+    call async_porcelaine#HistorySaveCmd('exec '.a:lines, a:lines)
+    return self.send_command("exec '". self.ensure_trailing_dot(a:lines), {'add_history' : 0})
   endf
 
   fun ctx.query(lines)
-    return self.send_command("query '".a:lines."'\n")
+    call async_porcelaine#HistorySaveCmd('query '.a:lines, a:lines)
+    return self.send_command("query '".self.ensure_trailing_dot(a:lines), {'add_history' : 0})
   endf
 
   fun ctx.addblock(lines)
-    return self.send_command("addblock '". self.ensure_trailing_dot(a:lines) ."'\n")
+    call async_porcelaine#HistorySaveCmd('addblock '.a:lines, a:lines)
+    return self.send_command("addblock '". self.ensure_trailing_dot(a:lines), {'add_history' : 0})
   endf
 
   call async_porcelaine#LogToBuffer(ctx)
@@ -67,8 +70,8 @@ endf
 " }}}
 
 fun! repl_logicblox#LBHelpToCompletion(lines)
-  let state = "wait_command"
   let completions = []
+  let state = "wait_command"
   for l in a:lines
     let r_match_one_line =  '^    \([^ ]\+\) \+\(.*\)'
     let r_match_multi_line =  '    \([^ ]\+\)'
@@ -94,45 +97,94 @@ fun! repl_logicblox#LBHelpToCompletion(lines)
 
     " export-protobuf     export protobuf message to a file
   endfor
+
+  call add(completions, {"word" : "create --unique", 'menu' : 'create with unique name'})
   return completions
 endf
 
 fun! repl_logicblox#HandleCompletion(data) dict
   call add(g:aaa, a:data)
 
+  let completions = self.completion_state.completions
+  let receive_stack = self.completion_state.receive_stack
   let lines = split(a:data, "\r\n")
 
-  let add_workspaces_on_regex = {'^op' : 'open ', '^del' : 'delete '}
+  if (receive_stack[0] == 'add_workspaces')
+    for v in ['open ', 'delete ']
+      let completions += map(lines[1:], '{"word": '.string(v).'.v:val}')
+    endfor
+  elseif (receive_stack[0] == 'lbi')
+    let completions += map(lines, '{"word": v:val}')
+  elseif (receive_stack[0] == 'lb')
+    let b:ctx.help_completion = repl_logicblox#LBHelpToCompletion(lines)
+    let completions += b:ctx.help_completion
+  else
+    throw "bad"
+  endif
+  call remove(receive_stack, 0)
+  call repl_logicblox#FinishCompletion()
+endf
 
-  if self.completion_state == -1
-    if (b:ctx.completion_stack[0] == 'add_workspaces')
-      for [k,v] in items(add_workspaces_on_regex)
-        if b:match_text =~ k
-          let b:ctx.completions += map(lines[1:], '{"word": '.string(v).'.v:val}')
-        endif
-      endfor
-    elseif (b:ctx.completion_stack[0] == 'lbi')
-      let b:ctx.completions = map(lines, '{"word": v:val}')
-    elseif (b:ctx.completion_stack[0] == 'lb')
-      let b:ctx.completions = repl_logicblox#LBHelpToCompletion(lines)
-      call add(b:ctx.completions, {"word" : "create --unique", 'menu' : 'create with unique name'})
-      for [k,v] in items(add_workspaces_on_regex)
-        if b:match_text =~ k
-          let b:ctx.completion_stack = ['add_workspaces']
-          call b:ctx.dataTillRegexMatchesLine('\(.*\)lb> ', funcref#Function(function('repl_logicblox#HandleCompletion'), {'self': b:ctx } ))
-          call b:ctx.write("workspaces\n")
-          return
-        endif
-      endfor
-    else
-      throw "bad"
+
+" fun! repl_logicblox#NextCompletion()
+"   let completions = b:ctx.completion_state.completions
+"   let stack = b:ctx.completion_state.stack
+" 
+"   let data_then_prompt = '\(.*\)'.s:prompt
+"   if len(b:ctx.completion_state.stack) == 0
+"     call feedkeys(repeat("\<bs>",len(s:wait))."\<c-x>\<c-o>", "n")
+"   else
+" 
+"     let next_ = stack[0]
+" 
+"     if next_ == 'add_workspaces'
+"       call b:ctx.dataTillRegexMatchesLine(data_then_prompt, funcref#Function(function('repl_logicblox#HandleCompletion'), {'self': b:ctx } ))
+"       call b:ctx.write("workspaces\n")
+"     elseif next_ == 'lb'
+"       if (has_key(b:ctx, 'help_completion'))
+"         let completions += b:ctx.help_completion
+"         call remove(stack, 0)
+"         call repl_logicblox#NextCompletion()
+"       else
+"         call b:ctx.dataTillRegexMatchesLine(data_then_prompt, funcref#Function(function('repl_logicblox#HandleCompletion'), {'self': b:ctx } ))
+"         call b:ctx.write("help\n")
+"       endif
+"     elseif b:ctx.completion_state.stack[0] == 'lbi'
+"       call b:ctx.dataTillRegexMatchesLine(data_then_prompt, funcref#Function(function('repl_logicblox#HandleCompletion'), {'self': b:ctx } ))
+"       call b:ctx.write("list\n")
+"     endif
+"   endif
+" endf
+
+
+fun! repl_logicblox#NextCompletion()
+  let send_stack = b:ctx.completion_state.send_stack
+  let b:ctx.completion_state.receive_stack += send_stack
+  let b:ctx.completion_state.send_stack = []
+
+  let data_then_prompt = '\(.\{-}\)'.s:prompt
+  for next_ in send_stack
+    if next_ == 'add_workspaces'
+      call b:ctx.dataTillRegexMatchesLine(data_then_prompt, funcref#Function(function('repl_logicblox#HandleCompletion'), {'self': b:ctx } ))
+      call b:ctx.write("workspaces\n")
+    elseif next_ == 'lb'
+      call b:ctx.dataTillRegexMatchesLine(data_then_prompt, funcref#Function(function('repl_logicblox#HandleCompletion'), {'self': b:ctx } ))
+      call b:ctx.write("help\n")
+    elseif next_ == 'lbi'
+      call b:ctx.dataTillRegexMatchesLine(data_then_prompt, funcref#Function(function('repl_logicblox#HandleCompletion'), {'self': b:ctx } ))
+      call b:ctx.write("list\n")
     endif
+  endfor
+endf
+
+fun! repl_logicblox#FinishCompletion()
+  let receive_stack = b:ctx.completion_state.receive_stack
+  if len(receive_stack) == 0
     call feedkeys(repeat("\<bs>",len(s:wait))."\<c-x>\<c-o>", "n")
   endif
 endf
 
 fun! repl_logicblox#LogicbloxComplete(findstart, base)
-
   if a:findstart
     let [bc,ac] = vim_addon_completion#BcAc()
     let b:bc = bc
@@ -140,7 +192,7 @@ fun! repl_logicblox#LogicbloxComplete(findstart, base)
     let b:start = len(bc)-len(b:match_text)
     return b:start
   else
-    if !has_key(b:ctx,'completions')
+    if !has_key(b:ctx, 'completion_state')
       " ask async process to provide completions
       let b:base = a:base
       let line = b:bc
@@ -148,25 +200,21 @@ fun! repl_logicblox#LogicbloxComplete(findstart, base)
         let line = b:bc
       endif
       let b:ctx.line = line[:-(len(a:base)+1)]
-      echom b:ctx.line
-      let b:ctx.completion_state = -1
-
       if has_key(b:ctx, 'last_prompt') && b:ctx.last_prompt =~ '^lbi'
-        let b:ctx.completion_stack = ['lbi']
-        call b:ctx.dataTillRegexMatchesLine('\(.*\)'.s:prompt, funcref#Function(function('repl_logicblox#HandleCompletion'), {'self': b:ctx } ))
-        call b:ctx.write("list\n")
+        let b:ctx.completion_state = {'receive_stack' : [], 'send_stack' :  ['lbi', 'lb', 'add_workspaces'], 'completions' : []}
+        call repl_logicblox#NextCompletion()
       else
         " tkkkjjjkjkk/epletion?
-        let b:ctx.completion_stack = ['lb']
-        call b:ctx.dataTillRegexMatchesLine('\(.*\)lb> ', funcref#Function(function('repl_logicblox#HandleCompletion'), {'self': b:ctx } ))
-        call b:ctx.write("help\n")
+        let b:ctx.completion_state = {'receive_stack' : [], 'send_stack': ['lb', 'add_workspaces'], 'completions' : []}
+        call repl_logicblox#NextCompletion()
       endif
       call feedkeys(s:wait)
 
       return []
     else
-      let completions = b:ctx.completions
-      unlet b:ctx.completions
+      let completions = b:ctx.completion_state.completions
+      unlet b:ctx.completion_state
+
       let b:additional_regex = ''
       call filter(completions, 'v:val.word =~ b:base')
       let g:compl = completions
