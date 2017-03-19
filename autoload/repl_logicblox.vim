@@ -72,6 +72,8 @@ endf
 fun! repl_logicblox#LBHelpToCompletion(lines)
   let completions = []
   let state = "wait_command"
+  let append = {'create' : [{"word" : "create --unique", 'menu' : 'create with unique name'}], 'close' : [{"word" : "close --destroy", 'menu' : 'close and destroy'}]}
+
   for l in a:lines
     let r_match_one_line =  '^    \([^ ]\+\) \+\(.*\)'
     let r_match_multi_line =  '    \([^ ]\+\)'
@@ -89,16 +91,16 @@ fun! repl_logicblox#LBHelpToCompletion(lines)
     if state == "wait_command" && l =~ r_match_one_line
       let li = matchlist(l, r_match_one_line)
       call add(completions, {'word': li[1], 'menu': li[2] })
+      if has_key(append, li[1])
+        let completions += append[li[1]]
+      endif
     elseif state == "wait_command" && l =~ r_match_multi_line
       let cmd = l[1]
       let state = "wait_multi"
       let multi_comment = []
     endif
-
     " export-protobuf     export protobuf message to a file
   endfor
-
-  call add(completions, {"word" : "create --unique", 'menu' : 'create with unique name'})
   return completions
 endf
 
