@@ -95,13 +95,29 @@ fun! repl_logicblox#HandleCompletion(data) dict
 
   let lines = split(a:data, "\r\n")
 
+  let add_workspaces_on_regex = {'^op' : 'open ', '^del' : 'delete '}
+
   if self.completion_state == -1
-    if (b:ctx.completion_type == 'open workspaces')
-      let b:ctx.completions = map(lines, '{"word": "open ".v:val}')
-    elseif (b:ctx.completion_type =~ '^lbi')
+    if (b:ctx.completion_stack[0] == 'add_workspaces')
+      for [k,v] in items(add_workspaces_on_regex)
+        if b:match_text =~ k
+          let b:ctx.completions += map(lines, '{"word": '.string(v).'.v:val}')
+        endif
+      endfor
+    elseif (b:ctx.completion_stack[0] == 'lbi')
       let b:ctx.completions = map(lines, '{"word": v:val}')
-    else
+    elseif (b:ctx.completion_stack[0] == 'lb')
       let b:ctx.completions = repl_logicblox#LBHelpToCompletion(lines)
+      for [k,v] in items(add_workspaces_on_regex)
+        if b:match_text =~ k
+          let b:ctx.completion_stack = ['add_workspaces']
+          call b:ctx.dataTillRegexMatchesLine('\(.*\)lb> ', funcref#Function(function('repl_logicblox#HandleCompletion'), {'self': b:ctx } ))
+          call b:ctx.write("workspaces\n")
+          return
+        endif
+      endfor
+    else
+      throw "bad"
     endif
     call feedkeys(repeat("\<bs>",len(s:wait))."\<c-x>\<c-o>", "n")
   endif
@@ -112,36 +128,30 @@ fun! repl_logicblox#LogicbloxComplete(findstart, base)
   if a:findstart
     let [bc,ac] = vim_addon_completion#BcAc()
     let b:bc = bc
-    let b:match_text = matchstr(bc, '\zs[^#().[\]{}\''";:\t ]*$')
+    let b:match_text = matchstr(bc, '\zs[^#().[\]{}\''";\t ]*$')
     let b:start = len(bc)-len(b:match_text)
     return b:start
   else
     if !has_key(b:ctx,'completions')
       " ask async process to provide completions
       let b:base = a:base
-
       let line = b:bc
       if line == ''
         let line = b:bc
       endif
       let b:ctx.line = line[:-(len(a:base)+1)]
+      echom b:ctx.line
       let b:ctx.completion_state = -1
 
-      if !has_key(b:ctx, 'last_prompt') || b:ctx.last_prompt =~ '^lbi'
-        let b:ctx.completion_type = 'lbi'
+      if has_key(b:ctx, 'last_prompt') && b:ctx.last_prompt =~ '^lbi'
+        let b:ctx.completion_stack = ['lbi']
         call b:ctx.dataTillRegexMatchesLine('\(.*\)'.s:prompt, funcref#Function(function('repl_logicblox#HandleCompletion'), {'self': b:ctx } ))
         call b:ctx.write("list\n")
       else
-        if line =~ '^op'
-          let b:ctx.completion_type = 'open workspaces'
-          call b:ctx.dataTillRegexMatchesLine('\(.*\)lb> ', funcref#Function(function('repl_logicblox#HandleCompletion'), {'self': b:ctx } ))
-          call b:ctx.write("workspaces\n")
-        else
-          " top level completion?
-          let b:ctx.completion_type = 'lb'
-          call b:ctx.dataTillRegexMatchesLine('\(.*\)lb> ', funcref#Function(function('repl_logicblox#HandleCompletion'), {'self': b:ctx } ))
-          call b:ctx.write("help\n")
-        endif
+        " tkkkjjjkjkk/epletion?
+        let b:ctx.completion_stack = ['lb']
+        call b:ctx.dataTillRegexMatchesLine('\(.*\)lb> ', funcref#Function(function('repl_logicblox#HandleCompletion'), {'self': b:ctx } ))
+        call b:ctx.write("help\n")
       endif
       call feedkeys(s:wait)
 
