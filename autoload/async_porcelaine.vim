@@ -136,7 +136,7 @@ fun! async_porcelaine#LogToBuffer(ctx)
       " \n by assigning it to pending.
 
       " this version is terrific slow let lines = split(get(self,'pending','').a:text, '[\r\n]\+', 1)
-      let lines = split(substitute( get(self,'pending','').a:text, "\r\%\(\n\)?", "\n", 'g'), '\n', 1)
+      let lines = split(substitute( get(self,'pending','').a:text, "\r\\%\\(\n\\)\\?", "\n", 'g'), '\n', 1)
       silent! unlet self.pending
       if lines[-1] == '' || (has_key(self, 'prompt') && lines[-1] =~ self.prompt)
         let self.last_prompt = lines[-1]

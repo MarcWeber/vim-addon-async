@@ -49,8 +49,6 @@ endf
 
 let s:wait  = "please wait"
 
-let g:lb_prompt = 'lb> '
-
 " called with b:ctx context
 fun! repl_logicblox#HandlePythonCompletion(...) dict
   " add debug here for debugging
