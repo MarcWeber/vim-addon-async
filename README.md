@@ -208,8 +208,9 @@ command! AsyncLogicblox call repl_logicblox#LogicbloxBuffer({'move_last' : 1})
 
 ```
 
-A history has been implemented. Pres ```<c-h>``` to use select a line you've used
-previously. See ```plugin/vim-addon-async.vim``` for file location and max lines
+A history has been implemented. Press ```<c-h>``` to use select a line you've used
+previously. Or press ```<c-x><c-h>``` to get completion in buffer.
+See ```plugin/vim-addon-async.vim``` for file location and max lines
 
 # 6) Credits:
 
