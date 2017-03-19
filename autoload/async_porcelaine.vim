@@ -88,6 +88,8 @@ fun! async_porcelaine#LogToBuffer(ctx)
   noremap <buffer> <c-h> :call async_porcelaine#CommandFromHistory()<cr>
   inoremap <buffer> <c-h> <esc>:call async_porcelaine#CommandFromHistory()<cr>a
 
+  inoremap <buffer> <expr> <c-x><c-h> vim_addon_completion#CompleteUsing('async_porcelaine#HistoryComplete')
+
   augroup VIM_ADDON_ASYNC_AUTO_KILL
     " looks like this is not working because vim already hase dropped
     " b:ctx.kill .. could be keeping global list .. and delete the one which
@@ -134,9 +136,10 @@ fun! async_porcelaine#LogToBuffer(ctx)
       " \n by assigning it to pending.
 
       " this version is terrific slow let lines = split(get(self,'pending','').a:text, '[\r\n]\+', 1)
-      let lines = split(substitute( get(self,'pending','').a:text, "\r", "\n", 'g'), '\n', 1)
+      let lines = split(substitute( get(self,'pending','').a:text, "\r\%\(\n\)?", "\n", 'g'), '\n', 1)
       silent! unlet self.pending
       if lines[-1] == '' || (has_key(self, 'prompt') && lines[-1] =~ self.prompt)
+        let self.last_prompt = lines[-1]
         " force adding \n when reply arrives after user has typed prompt
         let self.pending = "\n"
         call remove(lines, -1)
@@ -337,6 +340,28 @@ fun! async_porcelaine#HandleScalaCompletionData(data) dict
 
   endif
 
+endf
+
+
+fun! async_porcelaine#HistoryComplete(findstart, base)
+  if a:findstart
+    let [bc,ac] = vim_addon_completion#BcAc()
+    let b:bc = bc
+    let b:match_text = matchstr(bc, '\zs[^#().[\]{}\''";:\t ]*$')
+    let b:start = len(bc)-len(b:match_text)
+    return b:start
+  else
+    let b:base = a:base
+    let line = b:bc
+    let history = async_porcelaine#LoadHistory()
+    let completions = []
+    for x in history
+      if x[0] =~ '^'.line
+        call add(completions, {'word': substitute(substitute(x[0], nr2char(10).'$', '', ''), nr2char(10), "\n", 'g'), 'menu': x[1] })
+      endif
+    endfor
+    return completions
+  endif
 endf
 
 fun! async_porcelaine#ScalaOmniComplete(findstart, base)

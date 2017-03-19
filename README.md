@@ -204,6 +204,7 @@ command! AsyncPHP call repl_php#PHPBuffer({'cmd':'php -a','move_last' : 1})
 command! AsyncSML call repl_ruby#RubyBuffer({'cmd':'sml','move_last' : 1, 'prompt': '^- '})
 command! AsyncPython call repl_python#PythonBuffer({'cmd':'python -i','move_last' : 1, 'prompt': '^>>> '})
 command! AsyncScala call async_porcelaine#ScalaBuffer({'cmd':'scala','move_last' : 1, 'prompt': '^scala> '})
+command! AsyncLogicblox call repl_logicblox#LogicbloxBuffer({'move_last' : 1})
 
 ```
 

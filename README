@@ -200,6 +200,7 @@ create your own custom commands like this
   command! AsyncSML call repl_ruby#RubyBuffer({'cmd':'sml','move_last' : 1, 'prompt': '^- '})
   command! AsyncPython call repl_python#PythonBuffer({'cmd':'python -i','move_last' : 1, 'prompt': '^>>> '})
   command! AsyncScala call async_porcelaine#ScalaBuffer({'cmd':'scala','move_last' : 1, 'prompt': '^scala> '})
+  command! AsyncLogicblox call repl_logicblox#LogicbloxBuffer({'move_last' : 1})
 
 A history has been implemented. Pres <c-h> to use select a line you've used
 previously. See plugin/vim-addon-async.vim for file location and max lines
