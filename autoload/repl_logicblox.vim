@@ -19,26 +19,26 @@ fun! repl_logicblox#LogicbloxBuffer(...)
 
   fun ctx.ensure_trailing_dot(lines)
     let lines = a:lines
-    if (lines !~ '\.$')
+    if (lines !~ '\.[ \r\n]*$')
       echom 'warning: adding missing .'
       let lines .= '.'
     endif
-    return lines."\n"
+    return lines
   endf
 
   fun ctx.exec(lines)
     call async_porcelaine#HistorySaveCmd('exec '.a:lines, a:lines)
-    return self.send_command("exec '". self.ensure_trailing_dot(a:lines), {'add_history' : 0})
+    return self.send_command("exec '". self.ensure_trailing_dot(a:lines)."'\n", {'add_history' : 0})
   endf
 
   fun ctx.query(lines)
     call async_porcelaine#HistorySaveCmd('query '.a:lines, a:lines)
-    return self.send_command("query '".self.ensure_trailing_dot(a:lines), {'add_history' : 0})
+    return self.send_command("query '".self.ensure_trailing_dot(a:lines)."'\n", {'add_history' : 0})
   endf
 
   fun ctx.addblock(lines)
     call async_porcelaine#HistorySaveCmd('addblock '.a:lines, a:lines)
-    return self.send_command("addblock '". self.ensure_trailing_dot(a:lines), {'add_history' : 0})
+    return self.send_command("addblock '". self.ensure_trailing_dot(a:lines)."'\n", {'add_history' : 0})
   endf
 
   call async_porcelaine#LogToBuffer(ctx)

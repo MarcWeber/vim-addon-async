@@ -360,8 +360,8 @@ fun! async_porcelaine#HistoryComplete(findstart, base)
     let completions = []
     for x in history
       if x[0] =~ '^'.line
-        let cmd = substitute(substitute(x[0], nr2char(10).'$', '', ''))
-        call add(completions, {'word': cmd, nr2char(10), "\n", 'g'), 'abbr': len(cmd) > 80 ? cmd[0:80].'...' : cmd, 'info' : cmd, 'menu': x[1] })
+        let cmd = substitute(substitute(x[0], nr2char(10).'$', '', ''), nr2char(10), "\n", 'g')
+        call add(completions, {'word': cmd, 'abbr': len(cmd) > 80 ? cmd[0:80].'...' : cmd, 'info' : cmd, 'menu': x[1] })
       endif
     endfor
     return completions
