@@ -72,7 +72,12 @@ endf
 fun! repl_logicblox#LBHelpToCompletion(lines)
   let completions = []
   let state = "wait_command"
-  let append = {'create' : [{"word" : "create --unique", 'menu' : 'create with unique name'}], 'close' : [{"word" : "close --destroy", 'menu' : 'close and destroy'}]}
+
+  " for convenience add additional completions
+  let append = {}
+  let append['create'] = [{"word" : "create --unique", 'menu' : 'create with unique name'}]
+  let append['close']  = [{"word" : "close --destroy", 'menu' : 'close and destroy'}]
+  let append['addblock']  = [{"word" : "addblock <doc>", 'menu' : 'start multiline doc'}]
 
   for l in a:lines
     let r_match_one_line =  '^    \([^ ]\+\) \+\(.*\)'
@@ -202,7 +207,7 @@ fun! repl_logicblox#LogicbloxComplete(findstart, base)
         let line = b:bc
       endif
       let b:ctx.line = line[:-(len(a:base)+1)]
-      if has_key(b:ctx, 'last_prompt') && b:ctx.last_prompt =~ '^lbi'
+      if has_key(b:ctx, 'last_prompt') && b:ctx.last_prompt =~ 'lb [^>]'
         let b:ctx.completion_state = {'receive_stack' : [], 'send_stack' :  ['lbi', 'lb', 'add_workspaces'], 'completions' : []}
         call repl_logicblox#NextCompletion()
       else
